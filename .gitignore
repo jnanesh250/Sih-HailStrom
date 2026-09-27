@@ -46,3 +46,6 @@ frontend/dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime logs
+*.log

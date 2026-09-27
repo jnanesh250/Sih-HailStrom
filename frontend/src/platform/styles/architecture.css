@@ -1,0 +1,251 @@
+/* ============================================================
+   Aura Weather — architecture page design system.
+   Ported from aharon-kumar-kosetti/aura-weather (Lovable /
+   TanStack Start) into plain CSS scoped under .aura, so it
+   coexists with the StormSense platform skin and legacy core.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+.aura {
+  /* Design tokens (verbatim from the source repo) */
+  --radius: .35rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(.25 .018 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(.25 .018 255);
+  --primary: oklch(.34 .106 263);
+  --primary-foreground: oklch(.995 .001 260);
+  --secondary: oklch(.955 .028 62);
+  --secondary-foreground: oklch(.35 .075 58);
+  --muted: oklch(.976 .004 258);
+  --muted-foreground: oklch(.47 .022 255);
+  --accent: oklch(.955 .028 62);
+  --accent-foreground: oklch(.34 .106 263);
+  --border: oklch(.93 .003 270);
+  --input: oklch(.93 .003 270);
+  --ring: oklch(.71 .17 54);
+  --ink-soft: oklch(.47 .022 255);
+  --saffron: oklch(.71 .17 54);
+  --india-green: oklch(.47 .105 153);
+  --panel-tint: oklch(.976 .004 258);
+  --navy: oklch(.34 .106 263);
+  --navy-raised: oklch(.39 .098 263);
+  --chart-navy: oklch(.46 .11 263);
+  --chart-green: oklch(.47 .105 153);
+  --chart-saffron: oklch(.71 .17 54);
+  --chart-grid: oklch(.93 .003 270);
+  --chart-surface: oklch(1 0 0);
+  --warning: oklch(.72 .14 53);
+  --watch: oklch(.79 .13 88);
+}
+
+.aura, .aura *, .aura *::before, .aura *::after { box-sizing: border-box; }
+.aura {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'DM Sans', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.aura button, .aura a { -webkit-tap-highlight-color: transparent; }
+.aura :focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
+
+/* ---------- Layout container (header/footer live in shared gov chrome) ---------- */
+.aura .container { width: min(100% - 64px, 1250px); margin-inline: auto; }
+.aura .live-dot { display: inline-block; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--saffron); box-shadow: 0 0 9px var(--saffron); }
+
+/* ---------- Title band ---------- */
+.aura .title-band { background: var(--navy); color: var(--primary-foreground); overflow: hidden; }
+.aura .title-content { padding-block: 55px 61px; position: relative; }
+.aura .title-content::after { content: ""; position: absolute; width: 340px; height: 340px; border: 1px solid color-mix(in oklab, var(--saffron) 12%, transparent); border-radius: 50%; right: 3%; top: -130px; box-shadow: 0 0 0 75px color-mix(in oklab, var(--saffron) 2%, transparent), 0 0 0 145px color-mix(in oklab, var(--saffron) 2%, transparent); pointer-events: none; }
+.aura .eyebrow { color: var(--ink-soft); font-size: 10px; letter-spacing: 1.6px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+.aura .eyebrow.light { color: var(--saffron); }
+.aura .eyebrow-line { display: inline-block; width: 34px; height: 1px; background: var(--saffron); }
+.aura .title-band h1 { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(46px, 6vw, 74px); text-transform: uppercase; letter-spacing: 1px; line-height: .98; font-weight: 700; margin: 12px 0 15px; position: relative; z-index: 1; }
+.aura .title-period { color: var(--saffron); }
+.aura .title-band p { color: color-mix(in oklab, var(--primary-foreground) 68%, transparent); font-size: 14px; position: relative; z-index: 1; }
+
+/* ---------- Section scaffolding ---------- */
+.aura .section-band { padding-block: 74px 82px; }
+.aura .flow-section, .aura .intelligence-section { background: var(--panel-tint); }
+.aura .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 25px; margin-bottom: 30px; }
+.aura .section-heading h2 { font-size: clamp(25px, 3vw, 34px); line-height: 1.15; font-weight: 750; margin: 11px 0 8px; letter-spacing: 0; }
+.aura .section-heading p { color: var(--ink-soft); font-size: 14px; line-height: 1.6; max-width: 680px; }
+.aura .section-index { font-size: 10px; color: var(--ink-soft); letter-spacing: 1.2px; font-weight: 800; white-space: nowrap; padding-bottom: 5px; }
+.aura .flow-controls { display: flex; align-items: center; gap: 13px; flex: none; }
+.aura .flow-counter { font-size: 10px; color: var(--ink-soft); letter-spacing: 1.2px; font-weight: 700; white-space: nowrap; }
+.aura .flow-counter strong { font-size: 16px; color: var(--foreground); }
+.aura .btn-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 3px; background: var(--card); border: 1px solid var(--border); color: var(--foreground); cursor: pointer; padding: 0; transition: background .15s, border-color .15s; }
+.aura .btn-icon:hover { background: var(--panel-tint); border-color: color-mix(in oklab, var(--saffron) 45%, var(--border)); }
+
+/* ---------- Flow board (7 stages) ---------- */
+.aura .flow-board { display: grid; grid-template-columns: minmax(0, 1.62fr) minmax(295px, .8fr); gap: 18px; }
+.aura .flow-list { background: var(--card); border: 1px solid var(--border); border-radius: 5px; padding: 18px 19px; box-shadow: 0 5px 24px color-mix(in oklab, var(--primary) 4%, transparent); }
+.aura .flow-row { width: 100%; display: grid; grid-template-columns: 135px 28px minmax(0, 1fr); gap: 0; min-height: 75px; padding: 0; text-align: left; border: 0; background: none; font: inherit; border-radius: 0; white-space: normal; height: auto; color: var(--foreground); cursor: pointer; }
+.aura .flow-row:hover { background: transparent; }
+.aura .stage-index { display: flex; flex-direction: column; justify-content: center; align-items: flex-end; text-align: right; padding-right: 18px; }
+.aura .stage-index span { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; color: var(--saffron); }
+.aura .stage-index strong { font-size: 12px; line-height: 1.25; margin-top: 4px; font-weight: 750; }
+.aura .stage-track { display: flex; justify-content: center; position: relative; }
+.aura .stage-track::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--saffron); opacity: .55; }
+.aura .flow-row:first-child .stage-track::before { top: 50%; }
+.aura .flow-row:last-child .stage-track::before { bottom: 50%; }
+.aura .track-dot { z-index: 1; display: block; align-self: center; width: 6px; height: 6px; border: 1.5px solid var(--saffron); background: var(--card); border-radius: 50%; transition: all .3s; }
+.aura .flow-row.is-active .track-dot { background: var(--saffron); box-shadow: 0 0 0 4px color-mix(in oklab, var(--saffron) 18%, transparent); }
+.aura .stage-content { margin: 6px 0; padding: 9px 12px; background: var(--panel-tint); border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; justify-content: center; overflow: hidden; transition: background .3s, border-color .3s, box-shadow .3s; }
+.aura .flow-row.is-active .stage-content { background: var(--card); border-color: var(--saffron); box-shadow: 0 0 0 2px color-mix(in oklab, var(--saffron) 10%, transparent), 0 6px 16px color-mix(in oklab, var(--primary) 8%, transparent); }
+.aura .stage-content-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 5px; }
+.aura .stage-summary { display: flex; align-items: center; gap: 7px; color: var(--foreground); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.aura .stage-summary svg { color: var(--saffron); }
+.aura .active-caption { display: flex; align-items: center; gap: 2px; color: var(--saffron); font-size: 8px; font-weight: 800; letter-spacing: 1px; white-space: nowrap; }
+.aura .tool-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.aura .tool-pill { display: inline-flex; gap: 5px; align-items: center; border-radius: 3px; padding: 5px 7px; background: var(--card); border: 1px solid var(--border); font-size: 10px; line-height: 1.1; color: var(--foreground); font-weight: 600; }
+.aura .tool-pill svg { color: var(--saffron); flex: none; }
+.aura .flow-row.is-active .tool-pill { background: var(--panel-tint); }
+.aura .flow-detail { min-height: 100%; display: flex; flex-direction: column; padding: 28px; background: var(--navy); color: var(--primary-foreground); border: 1px solid color-mix(in oklab, var(--saffron) 22%, transparent); border-radius: 5px; position: relative; overflow: hidden; box-shadow: 0 10px 28px color-mix(in oklab, var(--primary) 14%, transparent); }
+.aura .flow-detail::before { content: ""; width: 210px; height: 210px; border: 1px solid color-mix(in oklab, var(--saffron) 18%, transparent); border-radius: 50%; position: absolute; top: 18%; right: -112px; box-shadow: 0 0 0 40px color-mix(in oklab, var(--saffron) 3%, transparent), 0 0 0 80px color-mix(in oklab, var(--saffron) 2%, transparent); pointer-events: none; }
+.aura .detail-top { display: flex; justify-content: space-between; color: var(--saffron); position: relative; }
+.aura .detail-number { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; letter-spacing: 1px; }
+.aura .flow-detail > div:nth-child(2) { margin: auto 0; position: relative; padding-block: 25px; }
+.aura .flow-detail h3 { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(38px, 4vw, 58px); line-height: .95; text-transform: uppercase; margin: 13px 0; max-width: 300px; font-weight: 700; }
+.aura .flow-detail p { color: color-mix(in oklab, var(--primary-foreground) 66%, transparent); font-size: 13px; line-height: 1.65; max-width: 300px; }
+.aura .detail-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; border-top: 1px solid color-mix(in oklab, var(--primary-foreground) 15%, transparent); padding-top: 22px; position: relative; }
+.aura .detail-foot span { display: flex; flex-direction: column; gap: 6px; }
+.aura .detail-foot small { color: var(--saffron); font-size: 9px; letter-spacing: 1.3px; font-weight: 800; }
+.aura .detail-foot strong { font-size: 11px; line-height: 1.35; }
+.aura .detail-progress { display: flex; gap: 5px; margin-top: 26px; position: relative; }
+.aura .detail-progress button { height: 3px; min-width: 0; flex: 1; padding: 0; border: 0; background: color-mix(in oklab, var(--primary-foreground) 23%, transparent); border-radius: 0; cursor: pointer; }
+.aura .detail-progress button.on { background: var(--saffron); box-shadow: 0 0 7px var(--saffron); }
+.aura .section-note { color: var(--ink-soft); font-size: 12px; margin-top: 16px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.aura .section-note svg { color: var(--saffron); }
+.aura .section-note a { color: var(--foreground); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.aura .section-note a:hover { color: var(--saffron); }
+
+/* ---------- Sources grid ---------- */
+.aura .sources-section, .aura .decision-section { background: var(--card); }
+.aura .source-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.aura .source-item { min-height: 207px; padding: 22px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); transition: background .2s; }
+.aura .source-item:hover { background: var(--panel-tint); }
+.aura .source-top { display: flex; justify-content: space-between; color: var(--saffron); }
+.aura .source-top span { color: var(--border); font-family: 'Barlow Condensed', sans-serif; font-size: 24px; line-height: 1; font-weight: 700; }
+.aura .source-item h3 { font-size: 14px; font-weight: 750; margin: 16px 0 7px; }
+.aura .source-type { display: inline-block; color: var(--ink-soft); font-size: 8px; font-weight: 800; letter-spacing: 1px; border: 1px solid var(--border); border-radius: 2px; padding: 4px 6px; }
+.aura .source-item p { color: var(--ink-soft); font-size: 11px; line-height: 1.6; margin-top: 11px; }
+
+/* ---------- Intelligence: engine + chart ---------- */
+.aura .engine-panel { background: var(--navy); border-radius: 5px; padding: 29px 34px; color: var(--primary-foreground); border: 1px solid color-mix(in oklab, var(--saffron) 20%, transparent); display: flex; gap: 34px; align-items: center; box-shadow: 0 8px 25px color-mix(in oklab, var(--primary) 12%, transparent); }
+.aura .engine-intro { display: flex; align-items: center; gap: 16px; border: 1px solid color-mix(in oklab, var(--saffron) 28%, transparent); padding: 20px; min-width: 295px; border-radius: 4px; box-shadow: 0 0 20px color-mix(in oklab, var(--saffron) 10%, transparent); position: relative; }
+.aura .engine-icon { color: var(--saffron); }
+.aura .engine-intro strong { display: block; font-family: 'Barlow Condensed', sans-serif; font-size: 17px; letter-spacing: 1.4px; font-weight: 700; }
+.aura .engine-intro small { display: block; margin-top: 4px; color: var(--saffron); font-size: 8px; letter-spacing: 1px; white-space: nowrap; }
+.aura .engine-live { position: absolute; bottom: -22px; left: 0; color: var(--saffron); font-size: 8px; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.aura .engine-modules { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; flex: 1; }
+.aura .engine-modules span { display: flex; align-items: center; gap: 8px; border: 1px solid color-mix(in oklab, var(--primary-foreground) 13%, transparent); background: var(--navy-raised); border-radius: 3px; padding: 12px 13px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.aura .engine-modules svg { color: var(--saffron); }
+.aura .visualization { margin-top: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 5px; padding: 25px 28px 16px; }
+.aura .viz-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.aura .viz-heading h3 { font-size: 19px; font-weight: 750; margin-top: 5px; }
+.aura .metric-tabs { display: flex; gap: 3px; padding: 3px; background: var(--panel-tint); border: 1px solid var(--border); border-radius: 4px; }
+.aura .metric-tab { font-size: 11px; height: 30px; border-radius: 3px; padding: 0 12px; color: var(--ink-soft); background: none; border: 0; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.aura .metric-tab.selected { background: var(--card); color: var(--foreground); box-shadow: 0 1px 4px color-mix(in oklab, var(--primary) 13%, transparent); }
+.aura .chart-wrap { position: relative; margin-top: 20px; }
+.aura .chart-value { display: flex; align-items: baseline; gap: 4px; font-family: 'Barlow Condensed', sans-serif; }
+.aura .chart-value span { font-size: 40px; font-weight: 700; line-height: 1; }
+.aura .chart-value small { font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--ink-soft); }
+.aura .chart-value em { font-family: 'DM Sans', sans-serif; font-style: normal; font-size: 10px; margin-left: 8px; color: var(--saffron); font-weight: 800; }
+.aura .signal-chart { display: block; width: 100%; height: 195px; overflow: visible; }
+.aura .chart-point { cursor: pointer; outline: none; }
+.aura .chart-point:focus-visible circle:first-child { stroke: var(--saffron); stroke-width: 2; }
+.aura .chart-axis { display: flex; justify-content: space-between; padding: 0 5%; color: var(--ink-soft); font-size: 9px; font-weight: 800; letter-spacing: 1px; }
+.aura .viz-foot { display: flex; justify-content: space-between; gap: 15px; border-top: 1px solid var(--border); margin-top: 18px; padding-top: 14px; color: var(--ink-soft); font-size: 9px; letter-spacing: .4px; }
+.aura .viz-foot span { display: flex; gap: 8px; align-items: center; }
+.aura .viz-empty { margin-top: 20px; border: 1px dashed var(--border); border-radius: 4px; padding: 34px 22px; color: var(--ink-soft); font-size: 12px; line-height: 1.6; text-align: center; }
+
+/* ---------- Decision steps + alert example ---------- */
+.aura .decision-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 28px; }
+.aura .decision-step-wrap { display: flex; align-items: center; gap: 7px; }
+.aura .decision-step { border-radius: 3px; font-size: 11px; height: 36px; padding: 0 10px; background: var(--card); border: 1px solid var(--border); color: var(--foreground); display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-family: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+.aura .decision-step span { color: var(--saffron); font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; }
+.aura .decision-step:hover { border-color: color-mix(in oklab, var(--saffron) 50%, var(--border)); }
+.aura .decision-step.selected { border-color: var(--saffron); background: var(--accent); }
+.aura .step-arrow { color: var(--ink-soft); flex: none; }
+.aura .alert-example { border: 1px solid var(--border); border-left: 3px solid var(--warning); border-radius: 4px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 35px; padding: 25px; }
+.aura .alert-main h3 { display: flex; align-items: center; gap: 8px; color: var(--warning); font-size: 16px; font-weight: 800; margin: 12px 0 8px; }
+.aura .alert-main p { color: var(--ink-soft); font-size: 12px; line-height: 1.7; max-width: 600px; }
+.aura .alert-facts { display: grid; gap: 8px; align-content: start; }
+.aura .alert-facts div { display: grid; grid-template-columns: 100px 1fr; gap: 12px; align-items: baseline; font-size: 11px; }
+.aura .alert-facts span { color: var(--ink-soft); font-size: 9px; font-weight: 800; letter-spacing: 1px; }
+.aura .alert-facts strong { font-size: 11px; font-weight: 700; }
+.aura .alert-facts .status-text { display: flex; align-items: center; gap: 7px; }
+.aura .alert-facts .status-text .live-dot { background: var(--watch); box-shadow: 0 0 9px var(--watch); }
+
+/* ---------- Footer removed: shared gov chrome ---------- */
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1050px) {
+  .aura .flow-board { grid-template-columns: minmax(0, 1.4fr) minmax(260px, .8fr); }
+  .aura .flow-row { grid-template-columns: 110px 22px minmax(0, 1fr); }
+  .aura .source-grid { grid-template-columns: repeat(3, 1fr); }
+  .aura .engine-panel { flex-direction: column; align-items: stretch; }
+  .aura .engine-intro { align-self: flex-start; }
+  .aura .engine-modules { justify-content: flex-start; margin-top: 10px; }
+}
+@media (max-width: 760px) {
+  .aura .container { width: min(100% - 32px, 1250px); }
+  .aura .title-content { padding-block: 44px 48px; }
+  .aura .title-content::after { right: -220px; }
+  .aura .section-band { padding-block: 50px 56px; }
+  .aura .flow-board { grid-template-columns: 1fr; }
+  .aura .flow-detail { min-height: 300px; }
+  .aura .flow-detail > div:nth-child(2) { margin: 15px 0; }
+  .aura .flow-detail h3 { font-size: 45px; }
+  .aura .source-grid { grid-template-columns: repeat(2, 1fr); }
+  .aura .alert-example { grid-template-columns: 1fr; gap: 23px; }
+  .aura .footer-main { grid-template-columns: repeat(2, 1fr); gap: 30px; }
+}
+@media (max-width: 510px) {
+  .aura .title-band h1 { font-size: 48px; }
+  .aura .title-band p { font-size: 12px; max-width: 280px; line-height: 1.6; }
+  .aura .section-heading { align-items: start; }
+  .aura .section-index { display: none; }
+  .aura .section-heading h2 { font-size: 26px; }
+  .aura .section-heading p { font-size: 12px; }
+  .aura .flow-controls { flex-direction: column; align-items: flex-end; gap: 6px; }
+  .aura .flow-counter { font-size: 8px; }
+  .aura .flow-list { padding: 12px 8px; }
+  .aura .flow-row { grid-template-columns: 78px 19px minmax(0, 1fr); min-height: 82px; }
+  .aura .stage-index { padding-right: 8px; }
+  .aura .stage-index span { font-size: 7px; }
+  .aura .stage-index strong { font-size: 10px; }
+  .aura .stage-content { padding: 8px; }
+  .aura .stage-summary { font-size: 9px; }
+  .aura .active-caption { display: none; }
+  .aura .tool-pill { font-size: 9px; padding: 4px 5px; }
+  .aura .tool-pill svg { width: 10px; height: 10px; }
+  .aura .source-grid { grid-template-columns: 1fr 1fr; }
+  .aura .source-item { padding: 15px; min-height: 215px; }
+  .aura .source-item h3 { font-size: 12px; }
+  .aura .source-item p { font-size: 10px; }
+  .aura .source-type { font-size: 7px; }
+  .aura .engine-panel { padding: 20px; }
+  .aura .engine-intro { min-width: 0; width: 100%; padding: 14px; }
+  .aura .engine-intro strong { font-size: 14px; }
+  .aura .engine-intro small { font-size: 6px; }
+  .aura .engine-modules span { font-size: 9px; padding: 8px; }
+  .aura .visualization { padding: 18px 14px; }
+  .aura .viz-heading { align-items: stretch; flex-direction: column; gap: 13px; }
+  .aura .metric-tabs { align-self: flex-start; }
+  .aura .metric-tab { padding: 0 8px; font-size: 10px; }
+  .aura .signal-chart { height: 160px; }
+  .aura .viz-foot span:last-child { display: none; }
+  .aura .decision-steps { gap: 5px; }
+  .aura .decision-step-wrap { gap: 5px; }
+  .aura .decision-step { font-size: 9px; padding: 0 7px; height: 31px; }
+  .aura .step-arrow { width: 11px; }
+  .aura .alert-example { padding: 18px; }
+  .aura .alert-facts div { grid-template-columns: 75px 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aura *, .aura *::before, .aura *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .aura { scroll-behavior: auto; }
+}

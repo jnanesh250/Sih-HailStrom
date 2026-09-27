@@ -12,7 +12,7 @@ import EcoAgriHub from './components/EcoAgriHub';
 import { stormWS } from './services/websocket';
 import { api } from './services/api';
 
-export default function App() {
+export default function LegacyDashboard() {
   const [telemetry, setTelemetry] = useState(null);
   const [activeTab, setActiveTab] = useState('gis'); // 'gis' or 'eco'
   const [dataMode, setDataMode] = useState('Simulation');
@@ -107,7 +107,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
+    <div className="legacy-core" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
       
       {/* 1. Header with Controls & Feeds status */}
       <Header

@@ -1,0 +1,1150 @@
+/* ============================================================
+   StormSense Command Centre — ported from
+   aharon-kumar-kosetti/crystal-clear-weather ("Crystal Clear
+   Weather"). Converted from Tailwind v4 / shadcn to plain CSS,
+   scoped under .ops so it coexists with the platform skin,
+   the landing page and the legacy dashboard.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+.ops {
+  /* Design tokens (verbatim from the source repo) */
+  --ops-radius: 0.375rem;
+  --ops-background: oklch(0.982 0.008 232);
+  --ops-foreground: oklch(0.235 0.052 244);
+  --ops-card: oklch(1 0 0 / 82%);
+  --ops-primary: oklch(0.43 0.095 233);
+  --ops-primary-foreground: oklch(0.99 0.004 230);
+  --ops-secondary: oklch(0.94 0.025 222);
+  --ops-muted: oklch(0.935 0.015 230);
+  --ops-muted-foreground: oklch(0.49 0.044 240);
+  --ops-accent: oklch(0.86 0.055 207);
+  --ops-destructive: oklch(0.56 0.205 25);
+  --ops-border: oklch(0.86 0.035 226);
+  --ops-input: oklch(0.81 0.04 224);
+  --ops-ring: oklch(0.57 0.105 215);
+  --ops-success: oklch(0.57 0.14 159);
+  --ops-warning: oklch(0.7 0.17 70);
+  --ops-danger: oklch(0.56 0.205 25);
+  --ops-rain: oklch(0.54 0.13 243);
+  --ops-electric: oklch(0.64 0.15 302);
+  --ops-shadow-panel: 0 10px 30px color-mix(in oklab, var(--ops-primary) 9%, transparent),
+    0 1px 3px color-mix(in oklab, var(--ops-foreground) 7%, transparent);
+  --ops-shadow-lift: 0 16px 46px color-mix(in oklab, var(--ops-primary) 14%, transparent);
+
+  min-height: 100vh;
+  overflow-x: clip;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--ops-secondary) 52%, var(--ops-background)),
+    var(--ops-background) 32rem
+  );
+  color: var(--ops-foreground);
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+.ops *,
+.ops *::before,
+.ops *::after {
+  border-color: var(--ops-border);
+  box-sizing: border-box;
+}
+
+.ops button,
+.ops a,
+.ops select,
+.ops input {
+  letter-spacing: 0;
+  font-family: inherit;
+}
+.ops button,
+.ops a {
+  cursor: pointer;
+}
+.ops :focus-visible {
+  outline: 2px solid var(--ops-ring);
+  outline-offset: 1px;
+}
+
+.ops .ops-container {
+  margin-inline: auto;
+  max-width: 1560px;
+}
+.ops .ops-pad {
+  padding-inline: 12px;
+  padding-block: 16px;
+}
+@media (min-width: 768px) {
+  .ops .ops-pad {
+    padding-inline: 24px;
+  }
+}
+
+/* ---------- Shared primitives ---------- */
+.ops .section-title {
+  margin-top: 0.25rem;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--ops-foreground);
+}
+.ops .data-label {
+  display: block;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  color: var(--ops-muted-foreground);
+}
+.ops .data-value {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+}
+.ops .ops-mono {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+}
+.ops .live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid color-mix(in oklab, var(--ops-success) 28%, transparent);
+  border-radius: calc(var(--ops-radius) - 2px);
+  background: color-mix(in oklab, var(--ops-success) 8%, transparent);
+  padding: 0.35rem 0.55rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--ops-success);
+  white-space: nowrap;
+}
+.ops .live-indicator i {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--ops-success);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--ops-success) 13%, transparent);
+  animation: ops-pulse-status 2s ease-in-out infinite;
+}
+
+/* ---------- Header removed: shared gov chrome ---------- */
+
+/* ---------- Buttons ---------- */
+.ops .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 2.25rem;
+  padding: 0 0.9rem;
+  border: 1px solid transparent;
+  border-radius: var(--ops-radius);
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: 0.15s ease;
+}
+.ops .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ops .btn--default {
+  background: var(--ops-primary);
+  color: var(--ops-primary-foreground);
+}
+.ops .btn--default:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--ops-primary) 88%, black);
+}
+.ops .btn--destructive {
+  background: var(--ops-destructive);
+  color: var(--ops-primary-foreground);
+}
+.ops .btn--destructive:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--ops-destructive) 88%, black);
+}
+.ops .btn--outline {
+  border-color: var(--ops-border);
+  background: transparent;
+  color: var(--ops-foreground);
+}
+.ops .btn--outline:hover:not(:disabled) {
+  background: var(--ops-muted);
+}
+.ops .btn--secondary {
+  border-color: transparent;
+  background: var(--ops-secondary);
+  color: var(--ops-primary);
+}
+.ops .btn--secondary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--ops-secondary) 70%, var(--ops-primary));
+}
+.ops .btn--ghost {
+  background: transparent;
+  color: var(--ops-foreground);
+}
+.ops .btn--ghost:hover:not(:disabled) {
+  background: var(--ops-muted);
+}
+.ops .btn--sm {
+  height: 2rem;
+  padding: 0 0.7rem;
+  font-size: 0.68rem;
+}
+.ops .btn--icon {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+/* ---------- Operations strip ---------- */
+.ops .ops-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--ops-border);
+  border-radius: calc(var(--ops-radius) + 2px);
+  background: color-mix(in oklab, var(--ops-card) 92%, transparent);
+  padding: 0.85rem 1rem;
+  box-shadow: var(--ops-shadow-panel);
+  backdrop-filter: blur(18px);
+}
+.ops .strip-left {
+  min-width: 0;
+}
+.ops .strip-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ops .threat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: start;
+  border-radius: calc(var(--ops-radius) - 2px);
+  background: color-mix(in oklab, var(--ops-danger) 10%, transparent);
+  padding: 0.3rem 0.5rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--ops-danger);
+  white-space: nowrap;
+}
+.ops .strip-city {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.ops .strip-sub {
+  margin: 0.25rem 0 0;
+  font-size: 11px;
+  color: var(--ops-muted-foreground);
+}
+.ops .strip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ops .select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ops .select-wrap select {
+  height: 2.25rem;
+  min-width: 12rem;
+  appearance: none;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  background: var(--ops-card);
+  padding: 0 2.2rem 0 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--ops-foreground);
+  outline: none;
+  cursor: pointer;
+}
+.ops .select-wrap svg {
+  pointer-events: none;
+  position: absolute;
+  right: 0.65rem;
+  color: var(--ops-muted-foreground);
+}
+
+/* ---------- Operations grid ---------- */
+.ops .operations-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.05fr) minmax(300px, 0.95fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+/* ---------- Radar shell ---------- */
+.ops .radar-shell {
+  position: relative;
+  min-height: 660px;
+  overflow: hidden;
+  border: 1px solid var(--ops-border);
+  border-radius: calc(var(--ops-radius) + 2px);
+  background: var(--ops-foreground);
+  box-shadow: var(--ops-shadow-lift);
+  isolation: isolate;
+}
+.ops .radar-host {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+/* The live legacy map keeps its own chrome; make it fill the shell. */
+.ops .radar-host .glass-panel {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.ops .radar-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--ops-foreground) 24%, transparent),
+    transparent 28%,
+    transparent 70%,
+    color-mix(in oklab, var(--ops-foreground) 48%, transparent)
+  );
+}
+.ops .radar-topbar {
+  position: absolute;
+  z-index: 5;
+  inset: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  pointer-events: none;
+  color: var(--ops-primary-foreground);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--ops-foreground) 72%, transparent), transparent);
+}
+.ops .radar-topbar .data-label {
+  color: color-mix(in oklab, var(--ops-primary-foreground) 72%, transparent);
+}
+.ops .radar-topbar h1 {
+  margin: 0.25rem 0 0;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.ops .radar-topbar .live-indicator {
+  background: color-mix(in oklab, var(--ops-foreground) 45%, transparent);
+  pointer-events: auto;
+}
+.ops .radar-readout {
+  position: absolute;
+  z-index: 5;
+  inset: auto 0.75rem 0.75rem;
+  display: flex;
+  gap: 1rem;
+  border: 1px solid color-mix(in oklab, var(--ops-primary-foreground) 18%, transparent);
+  border-radius: calc(var(--ops-radius) - 2px);
+  background: color-mix(in oklab, var(--ops-foreground) 70%, transparent);
+  padding: 0.55rem 0.7rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.52rem;
+  font-weight: 650;
+  color: color-mix(in oklab, var(--ops-primary-foreground) 84%, transparent);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+.ops .radar-readout .rr-ok {
+  color: color-mix(in oklab, var(--ops-success) 70%, var(--ops-primary-foreground));
+}
+
+/* ---------- Telemetry rail ---------- */
+.ops .telemetry-rail {
+  overflow: hidden;
+  border: 1px solid var(--ops-border);
+  border-radius: calc(var(--ops-radius) + 2px);
+  background: color-mix(in oklab, var(--ops-card) 92%, transparent);
+  box-shadow: var(--ops-shadow-panel);
+  backdrop-filter: blur(18px);
+  display: flex;
+  flex-direction: column;
+}
+.ops .panel-heading,
+.ops .section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--ops-border);
+}
+.ops .panel-heading h2,
+.ops .section-header h2 {
+  margin: 0.25rem 0 0;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.ops .metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.ops .metric-cell {
+  min-height: 8rem;
+  border-right: 1px solid var(--ops-border);
+  border-bottom: 1px solid var(--ops-border);
+  padding: 0.85rem 1rem;
+}
+.ops .metric-cell:nth-child(even) {
+  border-right: 0;
+}
+.ops .metric-cell strong {
+  display: block;
+  margin-top: 0.5rem;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.5rem;
+  color: var(--ops-primary);
+}
+.ops .metric-cell .unit {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ops-muted-foreground);
+}
+.ops .metric-cell .detail {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 10px;
+  color: var(--ops-muted-foreground);
+}
+.ops .metric--danger strong {
+  color: var(--ops-danger);
+}
+.ops .metric--rain strong {
+  color: var(--ops-rain);
+}
+.ops .metric--warning strong {
+  color: var(--ops-warning);
+}
+.ops .advisory-block {
+  padding: 1rem;
+  border-bottom: 1px solid var(--ops-border);
+  background: color-mix(in oklab, var(--ops-secondary) 38%, transparent);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.ops .advisory-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ops .icon-compact {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ops-radius);
+  background: color-mix(in oklab, var(--ops-primary) 10%, transparent);
+  color: var(--ops-primary);
+}
+.ops .advisory-block .advisory-head h2 {
+  margin: 0.1rem 0 0;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.ops .advisory-copy {
+  margin: 0.75rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+.ops .analyst-msg {
+  margin: 0.5rem 0 0;
+  width: fit-content;
+  max-width: 96%;
+  border-radius: var(--ops-radius);
+  background: var(--ops-primary);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.66rem;
+  color: var(--ops-primary-foreground);
+}
+.ops .analyst-msg--user {
+  margin-left: auto;
+  background: color-mix(in oklab, var(--ops-secondary) 80%, var(--ops-foreground));
+  color: var(--ops-foreground);
+}
+.ops .analyst-msg--busy {
+  opacity: 0.75;
+}
+
+/* Structured AI Storm Analyst reply blocks */
+.ops .analyst-block {
+  margin: 0 0 0.4rem;
+  line-height: 1.5;
+}
+.ops .analyst-block:last-child {
+  margin-bottom: 0;
+}
+.ops .analyst-block--head {
+  margin-top: 0.35rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+.ops .analyst-block--head .analyst-head-body {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.66rem;
+}
+.ops .analyst-block--li {
+  padding-left: 0.85rem;
+  position: relative;
+}
+.ops .analyst-block--li::before {
+  content: '';
+  position: absolute;
+  left: 0.15rem;
+  top: 0.5em;
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.75;
+}
+.ops .analyst-block--num {
+  padding-left: 1.05rem;
+}
+.ops .analyst-block--num::before {
+  display: none;
+}
+.ops .analyst-block--num b {
+  position: absolute;
+  left: 0;
+  font-variant-numeric: tabular-nums;
+}
+.ops .analyst-block--bottom {
+  margin-top: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  border-left: 2px solid currentColor;
+  background: color-mix(in oklab, currentColor 8%, transparent);
+  font-weight: 600;
+}
+.ops .prompt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+.ops .ops-input {
+  height: 2.25rem;
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--ops-input);
+  border-radius: var(--ops-radius);
+  background: var(--ops-card);
+  padding: 0 0.7rem;
+  font-size: 0.7rem;
+  outline: none;
+}
+.ops .ops-input:focus {
+  box-shadow: 0 0 0 2px var(--ops-ring);
+}
+.ops .ops-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.ops .warning-log {
+  padding-bottom: 0.4rem;
+}
+.ops .warning-log .panel-heading {
+  border-bottom: 0;
+}
+.ops .count-badge {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--ops-danger) 10%, transparent);
+  padding: 0.2rem 0.45rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.56rem;
+  color: var(--ops-danger);
+}
+.ops .warning-item {
+  display: grid;
+  grid-template-columns: 2.8rem 1fr;
+  gap: 0.65rem;
+  margin: 0 1rem 0.5rem;
+  border-left: 3px solid var(--ops-warning);
+  background: color-mix(in oklab, var(--ops-warning) 6%, transparent);
+  padding: 0.55rem 0.65rem;
+}
+.ops .warning-item b {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.6rem;
+  color: var(--ops-warning);
+}
+.ops .warning-item strong,
+.ops .warning-item small {
+  display: block;
+  font-size: 0.66rem;
+}
+.ops .warning-item small {
+  margin-top: 0.15rem;
+  color: var(--ops-muted-foreground);
+}
+.ops .warning-item--critical {
+  border-color: var(--ops-danger);
+  background: color-mix(in oklab, var(--ops-danger) 5%, transparent);
+}
+.ops .warning-item--critical b {
+  color: var(--ops-danger);
+}
+
+/* ---------- Hazard matrix ---------- */
+.ops .hazard-section {
+  margin-top: 1rem;
+}
+.ops .section-header--flow {
+  border: 0;
+  padding: 0 0 0.8rem;
+}
+.ops .hazard-note {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ops-muted-foreground);
+}
+.ops .hazard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.ops .hazard-card {
+  --ops-tone: var(--ops-primary);
+  border: 1px solid var(--ops-border);
+  border-top: 3px solid var(--ops-tone);
+  border-radius: calc(var(--ops-radius) + 2px);
+  background: color-mix(in oklab, var(--ops-card) 94%, transparent);
+  padding: 1rem;
+  box-shadow: var(--ops-shadow-panel);
+}
+.ops .tone-cool {
+  --ops-tone: var(--ops-primary);
+}
+.ops .tone-electric {
+  --ops-tone: var(--ops-electric);
+}
+.ops .tone-rain {
+  --ops-tone: var(--ops-rain);
+}
+.ops .tone-warning {
+  --ops-tone: var(--ops-warning);
+}
+.ops .hazard-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.ops .hazard-icon {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ops-radius);
+  background: color-mix(in oklab, var(--ops-tone) 10%, transparent);
+  color: var(--ops-tone);
+}
+.ops .hazard-state {
+  border-radius: calc(var(--ops-radius) - 2px);
+  background: color-mix(in oklab, var(--ops-tone) 9%, transparent);
+  padding: 0.25rem 0.4rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--ops-tone);
+}
+.ops .hazard-label {
+  display: block;
+  margin-top: 1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ops-muted-foreground);
+}
+.ops .hazard-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+.ops .hazard-value strong {
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.875rem;
+  color: var(--ops-tone);
+}
+.ops .hazard-value .unit {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--ops-muted-foreground);
+}
+.ops .prob-track {
+  height: 0.3rem;
+  margin-top: 0.8rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ops-muted);
+}
+.ops .prob-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ops-tone);
+  transition: width 0.5s ease;
+}
+.ops .hazard-detail {
+  display: block;
+  margin-top: 0.75rem;
+  font-size: 10px;
+  color: var(--ops-muted-foreground);
+}
+
+/* ---------- Instrument panel / forecast ---------- */
+.ops .instrument-panel {
+  margin-top: 1rem;
+  border: 1px solid var(--ops-border);
+  border-radius: calc(var(--ops-radius) + 2px);
+  background: color-mix(in oklab, var(--ops-card) 94%, transparent);
+  padding: 1rem;
+  box-shadow: var(--ops-shadow-panel);
+  backdrop-filter: blur(18px);
+}
+.ops .chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.58rem;
+  color: var(--ops-muted-foreground);
+}
+.ops .chart-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.18rem;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+  background: var(--ops-legend);
+}
+.ops .legend-risk {
+  --ops-legend: var(--ops-primary);
+}
+.ops .legend-hail {
+  --ops-legend: var(--ops-warning);
+}
+.ops .legend-lightning {
+  --ops-legend: var(--ops-electric);
+}
+.ops .forecast-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 1rem;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  background: color-mix(in oklab, var(--ops-secondary) 35%, transparent);
+}
+.ops .forecast-summary > div {
+  border-right: 1px solid var(--ops-border);
+  padding: 0.65rem 0.8rem;
+}
+.ops .forecast-summary > div:last-child {
+  border-right: 0;
+}
+.ops .forecast-summary strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.95rem;
+}
+.ops .chart-frame {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  height: 240px;
+  margin-top: 1rem;
+}
+.ops .y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 0.45rem 1rem 0;
+  text-align: right;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.52rem;
+  color: var(--ops-muted-foreground);
+}
+.ops .chart-canvas {
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid var(--ops-border);
+  border-bottom: 1px solid var(--ops-border);
+}
+.ops .chart-gridlines {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to right, var(--ops-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ops-border) 1px, transparent 1px);
+  background-size: 14.285% 33.333%;
+  opacity: 0.7;
+}
+.ops .threshold-line {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  top: 33%;
+  border-top: 1px dashed color-mix(in oklab, var(--ops-danger) 55%, transparent);
+}
+.ops .threshold-line span {
+  position: absolute;
+  right: 0.3rem;
+  top: -0.8rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.48rem;
+  color: var(--ops-danger);
+}
+.ops .chart-canvas svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding-bottom: 1rem;
+  overflow: visible;
+}
+.ops .confidence-area {
+  fill: color-mix(in oklab, var(--ops-primary) 9%, transparent);
+}
+.ops .line-risk,
+.ops .line-hail,
+.ops .line-lightning {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-width: 2.5;
+}
+.ops .line-risk {
+  stroke: var(--ops-primary);
+}
+.ops .line-hail {
+  stroke: var(--ops-warning);
+}
+.ops .line-lightning {
+  stroke: var(--ops-electric);
+}
+.ops .forecast-tabs {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  margin-top: 0.65rem;
+}
+.ops .forecast-tabs .btn {
+  height: auto;
+  flex-direction: column;
+  gap: 0.1rem;
+  border-radius: 0;
+}
+.ops .forecast-tabs small {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.52rem;
+  opacity: 0.72;
+}
+
+/* ---------- Simulator ---------- */
+.ops .simulator-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.7fr);
+  gap: 2rem;
+}
+.ops .sim-intro {
+  margin: 0.5rem 0 0;
+  max-width: 36rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--ops-muted-foreground);
+}
+.ops .sim-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+.ops .sim-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.ops .sim-control .sim-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ops .sim-control .sim-label svg {
+  color: var(--ops-primary);
+}
+.ops .sim-control b {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.65rem;
+  color: var(--ops-primary);
+}
+.ops .sim-control input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--ops-primary);
+}
+.ops .simulation-output {
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  background: color-mix(in oklab, var(--ops-secondary) 38%, transparent);
+  padding: 1rem;
+}
+.ops .model-badge {
+  border-radius: calc(var(--ops-radius) - 2px);
+  background: color-mix(in oklab, var(--ops-success) 9%, transparent);
+  padding: 0.25rem 0.4rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--ops-success);
+}
+.ops .score-gauge {
+  display: flex;
+  justify-content: center;
+  padding: 1.2rem 0 0.8rem;
+}
+.ops .score-gauge > div {
+  display: grid;
+  width: 8rem;
+  height: 8rem;
+  place-items: center;
+  border-radius: 999px;
+  background: conic-gradient(var(--ops-primary) var(--score, 0deg), var(--ops-muted) 0);
+}
+.ops .score-gauge > div::before {
+  content: '';
+  grid-area: 1 / 1;
+  width: 6.4rem;
+  height: 6.4rem;
+  border-radius: inherit;
+  background: var(--ops-background);
+}
+.ops .score-gauge span {
+  z-index: 1;
+  grid-area: 1 / 1;
+  text-align: center;
+}
+.ops .score-gauge strong,
+.ops .score-gauge small {
+  display: block;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+.ops .score-gauge strong {
+  font-size: 2rem;
+}
+.ops .score-gauge small {
+  font-size: 0.55rem;
+  color: var(--ops-muted-foreground);
+}
+.ops .output-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block: 1px solid var(--ops-border);
+}
+.ops .output-grid > div {
+  padding: 0.65rem 0.3rem;
+  text-align: center;
+}
+.ops .output-grid span,
+.ops .output-grid b {
+  display: block;
+}
+.ops .output-grid span {
+  font-size: 0.55rem;
+  color: var(--ops-muted-foreground);
+}
+.ops .output-grid b {
+  margin-top: 0.2rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+.ops .sim-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.ops .sim-actions .btn:first-child {
+  flex: 1;
+}
+
+/* ---------- Footnote / footer ---------- */
+.ops .data-footnote {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0 0.25rem;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.56rem;
+  color: var(--ops-muted-foreground);
+}
+.ops .data-footnote span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+/* ---------- Loading ---------- */
+.ops .ops-loading {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--ops-muted-foreground);
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes ops-pulse-status {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ---------- Responsive (adapted from the source repo) ---------- */
+@media (max-width: 1100px) {
+  .ops .radar-shell {
+    min-height: 600px;
+  }
+  .ops .operations-grid {
+    gap: 0.75rem;
+  }
+}
+@media (max-width: 820px) {
+  .ops .operations-grid {
+    grid-template-columns: 1fr;
+  }
+  .ops .radar-shell {
+    min-height: 560px;
+  }
+  .ops .telemetry-rail {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .ops .telemetry-rail > .panel-heading {
+    grid-column: 1 / -1;
+  }
+  .ops .metrics-grid {
+    border-right: 1px solid var(--ops-border);
+  }
+  .ops .advisory-block {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .ops .warning-log {
+    grid-column: 1 / -1;
+  }
+  .ops .hazard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ops .forecast-tabs {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .ops .ops-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .ops .strip-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+  }
+  .ops .select-wrap {
+    min-width: 0;
+  }
+  .ops .select-wrap select {
+    width: 100%;
+    min-width: 0;
+  }
+  .ops .radar-shell {
+    min-height: 510px;
+  }
+  .ops .radar-topbar {
+    padding: 0.75rem;
+  }
+  .ops .radar-topbar h1 {
+    font-size: 0.8rem;
+  }
+  .ops .radar-readout {
+    gap: 0.55rem;
+  }
+  .ops .telemetry-rail {
+    display: block;
+  }
+  .ops .metrics-grid {
+    border-right: 0;
+  }
+  .ops .hazard-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .ops .hazard-card {
+    min-width: 0;
+    padding: 0.8rem;
+  }
+  .ops .forecast-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ops .forecast-summary > div:nth-child(2) {
+    border-right: 0;
+  }
+  .ops .forecast-summary > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--ops-border);
+  }
+  .ops .chart-frame {
+    height: 200px;
+  }
+  .ops .forecast-tabs {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    grid-template-columns: repeat(11, 4.25rem);
+    max-width: 100%;
+  }
+  .ops .simulator-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .ops .section-header--flow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ops *,
+  .ops *::before,
+  .ops *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
