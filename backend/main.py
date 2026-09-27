@@ -1,10 +1,15 @@
 import asyncio
 import os
+from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
+
+# Load backend/.env (GROK_API_KEY / XAI_API_KEY, TARGET_CITY, ...) BEFORE
+# SimulationManager (and its GrokService) reads the environment.
+load_dotenv()
 
 from services.simulation_manager import SimulationManager
 
@@ -149,37 +154,102 @@ def select_mode(mode: str = Body(..., embed=True)):
         sim_manager.current_mode = mode
     return {"current_mode": sim_manager.current_mode}
 
+def _compass_bearing(deg) -> str:
+    """Compass bearing string from direction degrees (SE, SW, ...)."""
+    try:
+        d = float(deg)
+    except (TypeError, ValueError):
+        return "—"
+    return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][round(((d % 360) + 360) % 360 / 45) % 8]
+
+
+def _engine_assessment() -> dict:
+    """
+    Structured assessment produced by the StormSense engine (physics + ML +
+    tracking). This — NOT raw observations — is what the AI Storm Analyst
+    receives and explains. The LLM is an explanation layer, never the
+    forecaster.
+
+    Shape (matches the design contract):
+        { storm, hazards, tracking, environment, observations }
+    """
+    state = sim_manager.get_current_state()
+    storm = state["storm"]
+    hazards = state["hazards"]
+    weather = state["weather"]
+    tracking = state["tracking"]
+    radar = state["radar"]
+    lightning = state["lightning"]
+    satellite = state.get("satellite", {})
+
+    return {
+        "engine": "StormSense RF/physics nowcasting engine",
+        "storm": {
+            "storm_id": storm["storm_id"],
+            "stage": storm["stage"],
+            "intensity": storm["intensity"],
+            "speed_kmh": storm["speed_kmh"],
+            "direction": _compass_bearing(storm.get("direction_deg")),
+            "radius_km": storm.get("radius_km"),
+            "position": {"lat": storm["lat"], "lon": storm["lon"]},
+        },
+        "hazards": {
+            "severity_level": hazards.get("severity_level"),
+            "overall_convective_risk": hazards.get("overall_convective_risk"),
+            "hail_probability": hazards.get("hail_probability"),
+            "lightning_probability": hazards.get("lightning_probability"),
+            "cloudburst_probability": hazards.get("cloudburst_probability"),
+            "downburst_probability": hazards.get("downburst_probability"),
+        },
+        "tracking": {
+            "target_name": tracking["target"]["name"],
+            "distance_km": tracking["target"]["distance_km"],
+            "arrival_minutes": tracking["target"]["arrival_minutes"],
+            "imminent_threat": tracking["target"]["imminent_threat"],
+            "path_waypoints": [
+                {"label": wp["label"], "risk": wp["risk"], "status": wp["status"]}
+                for wp in tracking.get("waypoints", [])
+            ],
+        },
+        "environment": {
+            "cape_j_kg": weather.get("cape_j_kg"),
+            "humidity_percent": weather.get("humidity_percent"),
+            "pressure_hpa": weather.get("pressure_hpa"),
+            "temperature_c": weather.get("temperature_c"),
+            "wind_speed_kmh": weather.get("wind_speed_kmh"),
+            "wind_gusts_kmh": weather.get("wind_gusts_kmh"),
+        },
+        "observations": {
+            "max_reflectivity_dbz": radar.get("max_reflectivity_dbz"),
+            "hail_core_present": radar.get("hail_core_present"),
+            "total_strikes_1min": lightning.get("total_strikes_1min"),
+            "lightning_jump_detected": lightning.get("lightning_jump_detected"),
+            "cloud_top_temp_c": satellite.get("min_cloud_top_temp_c"),
+            "updraft_velocity_ms": satellite.get("updraft_velocity_ms"),
+        },
+    }
+
+
 @app.post("/api/ai/explain")
 def explain_alert():
-    """Grok AI Convective Risk Explanation Layer."""
-    state = sim_manager.get_current_state()
-    explanation = sim_manager.grok_svc.explain_risk(
-        state["storm"],
-        state["hazards"],
-        state["weather"]
-    )
-    return explanation
+    """AI Storm Analyst: explains the engine's structured risk assessment
+    in plain language for disaster-management officers."""
+    return sim_manager.grok_svc.explain_risk(_engine_assessment())
+
 
 @app.post("/api/ai/chat")
 def chat_ai(req: ChatRequest):
-    """Interactive Q&A with Grok AI Storm Analyst."""
-    state = sim_manager.get_current_state()
-    context = {
-        "storm_id": state["storm"]["storm_id"],
-        "stage": state["storm"]["stage"],
-        "speed_kmh": state["storm"]["speed_kmh"],
-        "overall_convective_risk": state["hazards"]["overall_convective_risk"],
-        "hail_probability": state["hazards"]["hail_probability"],
-        "lightning_probability": state["hazards"]["lightning_probability"],
-        "cloudburst_probability": state["hazards"]["cloudburst_probability"],
-        "downburst_probability": state["hazards"]["downburst_probability"],
-        "cape_j_kg": state["weather"]["cape_j_kg"],
-        "arrival_minutes": state["tracking"]["target"]["arrival_minutes"]
-    }
-    answer = sim_manager.grok_svc.chat(req.message, context)
+    """Ask StormSense AI — grounded Q&A over the engine's structured output."""
+    assessment = _engine_assessment()
+    answer = sim_manager.grok_svc.chat(req.message, assessment)
     return {
         "response": answer,
-        "provider": "xAI Grok 4.7" if sim_manager.grok_svc.api_key else "StormSense Convective Reasoning Engine"
+        "provider": (
+            sim_manager.grok_svc.provider_label
+            if sim_manager.grok_svc.api_key
+            else "StormSense Convective Reasoning Engine"
+        ),
+        "grounded_on": "engine_assessment",
     }
 
 @app.websocket("/ws/live")
