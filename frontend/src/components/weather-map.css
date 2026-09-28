@@ -1,0 +1,396 @@
+/* ============================================================
+   WeatherMap component styles (.wm-*).
+   The map canvas fills its box; every control lives in a clean,
+   light toolbar BELOW the map instead of dark overlay panels.
+   ============================================================ */
+
+.wm-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  min-height: 360px;
+  overflow: hidden;
+}
+
+.wm-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.wm-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wm-sweep {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.85;
+}
+
+/* On-map status chip (not a control) */
+.wm-mode {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 15, 29, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 20px;
+  padding: 5px 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  max-width: calc(100% - 24px);
+}
+.wm-mode span.mode-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #f8fafc;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wm-mode .mode-badge {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.66rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  white-space: nowrap;
+}
+
+/* Compact live telemetry chip (only when no nowcast HUD) */
+.wm-fallback-hud {
+  position: absolute;
+  top: 14px;
+  right: 54px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(10, 15, 29, 0.9);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  max-width: 230px;
+}
+
+/* ---------- Toolbar below the map ---------- */
+.wm-toolbar {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-top: 1px solid #dbe3f0;
+  color: #0f172a;
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.wm-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-width: 0;
+}
+
+.wm-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.wm-group--grow {
+  flex: 1 1 240px;
+}
+
+.wm-group-label {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Segmented basemap switcher */
+.wm-seg {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  background: #eef2f8;
+  border: 1px solid #dbe3f0;
+  border-radius: 10px;
+}
+
+.wm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d7dfec;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.wm-btn:hover {
+  background: #f1f6fd;
+  border-color: #b9c9e2;
+}
+.wm-seg .wm-btn {
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  padding: 5px 9px;
+}
+.wm-seg .wm-btn.is-on {
+  background: var(--wm-tint, #0284c7);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+}
+
+/* Overlay toggle chips */
+.wm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.wm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d7dfec;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.wm-chip:hover {
+  background: #f1f6fd;
+}
+.wm-chip .wm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wm-tint, #94a3b8);
+  opacity: 0.35;
+  flex: none;
+}
+.wm-chip.is-on {
+  background: color-mix(in oklab, var(--wm-tint, #0284c7) 10%, #ffffff);
+  border-color: color-mix(in oklab, var(--wm-tint, #0284c7) 55%, #ffffff);
+  color: color-mix(in oklab, var(--wm-tint, #0284c7) 72%, #0f172a);
+}
+.wm-chip.is-on .wm-dot {
+  opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--wm-tint, #0284c7) 18%, transparent);
+}
+
+/* Legend */
+.wm-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: #64748b;
+  white-space: nowrap;
+}
+.wm-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.wm-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ---------- Playback row (storm journey) ---------- */
+.wm-select {
+  border: 1px solid #d7dfec;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.74rem;
+  font-weight: 650;
+  max-width: 230px;
+  min-width: 0;
+}
+.wm-select:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.wm-ibtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #d7dfec;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.wm-ibtn:hover {
+  background: #f1f6fd;
+  border-color: #b9c9e2;
+}
+.wm-ibtn.is-on {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+.wm-ibtn.is-play.is-on {
+  background: #047857;
+  border-color: #047857;
+}
+
+/* Sim clock — hours / minutes of the replayed storm time */
+.wm-clock {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  background: #eef6ff;
+  border: 1px solid #cfe3fa;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  white-space: nowrap;
+}
+.wm-clock b {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.wm-clock small {
+  font-size: 0.66rem;
+  font-weight: 650;
+  color: #64748b;
+}
+
+/* Speed selector expressed in simulated hours per real second */
+.wm-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wm-speed .wm-seg .wm-btn {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 5px 8px;
+}
+.wm-speed .wm-seg .wm-btn.is-on {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+/* Scrub track */
+.wm-scrub {
+  flex: 1 1 160px;
+  min-width: 120px;
+  height: 10px;
+  border-radius: 999px;
+  background: #e6ecf5;
+  border: 1px solid #d7dfec;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.wm-scrub > div {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%);
+}
+.wm-scrub:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.wm-caption {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: #64748b;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wm-caption.is-pred {
+  color: #047857;
+}
+.wm-caption.is-obs {
+  color: #b45309;
+}
+
+@media (max-width: 900px) {
+  .wm-legend {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .wm-toolbar {
+    padding: 8px;
+    gap: 7px;
+  }
+  .wm-group-label {
+    display: none;
+  }
+  .wm-mode {
+    top: 8px;
+  }
+  .wm-mode .mode-badge {
+    display: none;
+  }
+  .wm-fallback-hud {
+    right: 48px;
+    top: 8px;
+    padding: 6px 9px;
+  }
+}

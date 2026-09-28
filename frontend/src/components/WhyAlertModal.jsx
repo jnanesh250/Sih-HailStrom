@@ -83,11 +83,12 @@ export default function WhyAlertModal({ isOpen, onClose, telemetry }) {
             <Sparkles size={22} color="#38bdf8" />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>
               AI CONVECTIVE EXPLAINABILITY DOSSIER
             </h2>
             <p style={{ fontSize: '0.76rem', color: '#38bdf8' }}>
-              Decision Support Layer: {briefing?.provider || 'xAI Grok 4.7 & Convective Engine'}
+              Decision Support Layer: {briefing?.provider || 'xAI Grok 4.7 & Convective Engine'}<br/>
+              <strong style={{ color: '#4ade80' }}>Powered by 2015 Kaggle NOAA SWDI Dataset</strong>
             </p>
           </div>
         </div>
@@ -134,15 +135,16 @@ export default function WhyAlertModal({ isOpen, onClose, telemetry }) {
 
         {/* AI Briefing Text */}
         <div style={{
-          background: '#090d16',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
+          background: '#0f172a',
+          border: '1px solid rgba(56, 189, 248, 0.4)',
           borderRadius: '10px',
           padding: '16px',
-          fontSize: '0.85rem',
+          fontSize: '0.9rem',
           lineHeight: 1.6,
-          color: '#e2e8f0',
+          color: '#ffffff',
           whiteSpace: 'pre-wrap',
-          marginBottom: '20px'
+          marginBottom: '20px',
+          boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
         }}>
           {loading ? (
             <div style={{ padding: '20px', textAlign: 'center', color: '#38bdf8' }}>

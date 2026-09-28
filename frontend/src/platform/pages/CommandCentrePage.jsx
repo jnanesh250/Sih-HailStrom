@@ -8,6 +8,7 @@ import '../styles/command.css';
 import WeatherMap from '../../components/WeatherMap.jsx';
 import { api } from '../../services/api';
 import { stormWS } from '../../services/websocket';
+import { useNowcast } from '../../services/nowcast';
 import SiteFooter from '../components/SiteFooter.jsx';
 
 /* Command Centre ported from aharon-kumar-kosetti/crystal-clear-weather.
@@ -190,6 +191,7 @@ function Advisor({ disabled }) {
 
 export default function CommandCentrePage() {
   const { telemetry, lastScan, connected } = useTelemetry();
+  const nowcast = useNowcast();
   const [paused, setPaused] = useState(false);
   const [scenario, setScenario] = useState('Rapid Intensification');
   const [active, setActive] = useState(0);
@@ -379,7 +381,7 @@ export default function CommandCentrePage() {
         <div className="operations-grid">
           <section id="radar" className="radar-shell" aria-label="Live composite weather radar">
             <div className="radar-host">
-              <WeatherMap telemetry={telemetry} />
+              <WeatherMap telemetry={telemetry} nowcast={nowcast} />
             </div>
             <div className="radar-shade" />
             <div className="radar-topbar">
@@ -433,6 +435,35 @@ export default function CommandCentrePage() {
             </div>
           </aside>
         </div>
+
+        {/* ---------- AI briefing: the same model that drives the map ---------- */}
+        {nowcast.nowcast && (
+          <section className="hazard-section" aria-label="AI storm briefing grounded in the trained model">
+            <div className="section-header section-header--flow">
+              <div>
+                <span className="data-label">AI storm briefing · from the model driving this map</span>
+                <h2 className="section-title">
+                  {nowcast.nowcast.storm.name === 'UNNAMED'
+                    ? 'An unnamed cyclone'
+                    : nowcast.nowcast.storm.name} {nowcast.nowcast.storm.season} — what the model sees
+                </h2>
+              </div>
+              <span className="hazard-note">Real record replayed · forecast path on the map is the model's</span>
+            </div>
+            <p style={{
+              margin: '10px 0 8px',
+              fontSize: '0.95rem',
+              lineHeight: 1.65,
+              color: 'var(--text-bright, #e2e8f0)',
+            }}>
+              {nowcast.nowcast.briefing}
+            </p>
+            <p className="hazard-note" style={{ opacity: 0.75 }}>
+              Amber path = what the storm actually did. Green path = where the trained model carries it next.
+              Press ◎ accuracy on the map to overlay where the model was shadow-tested against this storm's real positions.
+            </p>
+          </section>
+        )}
 
         {/* ---------- Hazard matrix ---------- */}
         <section id="hazards" className="hazard-section">

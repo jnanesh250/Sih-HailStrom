@@ -1,9 +1,29 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Zap, Navigation, Globe, Eye, Volume2, VolumeX, Radio, Sparkles } from 'lucide-react';
+import {
+  CircleDashed, Crosshair, Globe, Map as MapIcon, Maximize2, Navigation, Pause, Play,
+  Radar, RotateCcw, Route, Satellite, Target, Thermometer, Zap,
+} from 'lucide-react';
+import './weather-map.css';
 
-export default function WeatherMap({ telemetry }) {
+/* Simulated storm clock shown under the map (UTC). */
+const fmtClock = (ms) => (
+  ms == null || !Number.isFinite(ms)
+    ? '—'
+    : new Date(ms).toLocaleString('en-GB', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC',
+    })
+);
+const fmtElapsed = (ms) => {
+  if (!Number.isFinite(ms)) return '—';
+  const total = Math.max(0, Math.round(ms / 60000));
+  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`;
+};
+const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const compass = (deg) => COMPASS[Math.round(((((deg ?? 0) % 360) + 360) % 360) / 45) % 8];
+
+export default function WeatherMap({ telemetry, nowcast, overlays }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const radarCanvasRef = useRef(null);
@@ -17,9 +37,93 @@ export default function WeatherMap({ telemetry }) {
     trajectory: true,
     lightning: true,
     radarSweep: true,
-    windVectors: true
+    windVectors: true,
+    cone: true
   });
-  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  // ----- ML Nowcast: the map IS the product. The storm travels its real
+  // track, then the trained model takes over and carries it forward. -----
+  const nc = nowcast?.nowcast || null;
+  const [mapReady, setMapReady] = useState(false);
+  const [styleEpoch, setStyleEpoch] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(0.12);
+  const [prog, setProg] = useState(0);           // playhead along the full path
+  const [showAccuracy, setShowAccuracy] = useState(false);
+  const [caption, setCaption] = useState('');
+  const [speed, setSpeed] = useState(3); // simulated storm-hours replayed per real second
+  const timerRef = useRef(null);
+  const stormMarkerRef = useRef(null);
+  const camTickRef = useRef(0);
+
+  const obsCount = nc?.observed?.length || 0;
+  const path = useMemo(() => (
+    nc ? [
+      ...nc.observed.map((p) => [p.lon, p.lat]),
+      ...nc.forecast.map((p) => [p.lon, p.lat]),
+    ] : []
+  ), [nc]);
+  // Timestamp for every path point (observed fix or forecast hour) so the
+  // replay clock under the map can show real hours/minutes of storm time.
+  const pathTimes = useMemo(() => (
+    nc ? [
+      ...nc.observed.map((p) => Date.parse(p.time) || NaN),
+      ...nc.forecast.map((p) => Date.parse(p.time) || NaN),
+    ] : []
+  ), [nc]);
+  const clockTime = useMemo(() => {
+    if (!pathTimes.length) return null;
+    const i = Math.min(Math.floor(clampProg(prog)), pathTimes.length - 1);
+    const j = Math.min(i + 1, pathTimes.length - 1);
+    const frac = clampProg(prog) - Math.floor(clampProg(prog));
+    const a = pathTimes[i];
+    const b = pathTimes[j];
+    if (!Number.isFinite(a)) return null;
+    if (!Number.isFinite(b)) return a;
+    return a + (b - a) * frac;
+  }, [pathTimes, prog]);
+
+  const coneData = nc?.geojson?.cone || { type: 'FeatureCollection', features: [] };
+  const travelledLine = nc?.geojson?.travelled || null;
+
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const clampProg = (v) => Math.max(0, Math.min(v, Math.max(path.length - 1, 0)));
+  const markerPos = useMemo(() => (
+    path.length >= 2
+      ? lerp(path[Math.min(Math.floor(clampProg(prog)), path.length - 2)],
+        path[Math.min(Math.floor(clampProg(prog)) + 1, path.length - 1)],
+        clampProg(prog) - Math.floor(clampProg(prog)))
+      : null
+  ), [path, prog]);
+  const trailCoords = useMemo(() => (
+    path.length >= 2 && markerPos
+      ? [...path.slice(0, Math.min(Math.floor(clampProg(prog)) + 1, path.length - 1)), markerPos]
+      : []
+  ), [path, prog, markerPos]);
+  const segInfo = useMemo(() => {
+    if (!nc || !path.length) return null;
+    const idx = Math.min(Math.floor(clampProg(prog)), path.length - 1);
+    if (idx < obsCount) {
+      const p = nc.observed[idx];
+      return { phase: 'observed', label: `Observed track · ${String(p.time).slice(11, 16)} UTC`, windWord: '' };
+    }
+    const f = nc.forecast[idx - obsCount];
+    if (!f) return { phase: 'predicted', label: 'Predicted by the trained model', windWord: '' };
+    const dw = f.wind - nc.observed[obsCount - 1].wind;
+    const wtxt = dw >= 5 ? 'strengthening' : dw <= -5 ? 'weakening' : 'steady winds';
+    return { phase: 'predicted', label: `Model forecast · +${f.lead_hours} hours`, windWord: wtxt };
+  }, [nc, path, prog, obsCount]);
+
+  const hudBtnStyle = {
+    background: 'rgba(52, 211, 153, 0.18)',
+    border: '1px solid #34d399',
+    color: '#6ee7b7',
+    borderRadius: '6px',
+    padding: '2px 7px',
+    fontSize: '0.72rem',
+    fontWeight: 800,
+    cursor: 'pointer'
+  };
 
   const storm = telemetry?.storm || { lat: 16.506, lon: 80.648, speed_kmh: 42, direction_deg: 135 };
   const tracking = telemetry?.tracking;
@@ -311,6 +415,7 @@ export default function WeatherMap({ telemetry }) {
 
     map.on('load', () => {
       addConvectiveLayers(map);
+      setMapReady(true);
     });
 
     mapRef.current = map;
@@ -330,6 +435,7 @@ export default function WeatherMap({ telemetry }) {
     map.setStyle(mapStyles[newStyleKey]);
     map.once('style.load', () => {
       addConvectiveLayers(map);
+      setStyleEpoch((e) => e + 1); // re-add + resync the nowcast layers too
     });
   };
 
@@ -434,6 +540,194 @@ export default function WeatherMap({ telemetry }) {
     };
   }, [layersVisibility.radarSweep]);
 
+  // Motion animation: the storm travels the whole path smoothly, then loops.
+  useEffect(() => {
+    if (!playing || path.length < 2) return undefined;
+    timerRef.current = setInterval(() => {
+      setProg((p) => {
+        const next = p + playbackSpeed; // dynamic speed
+        return next >= path.length - 1 ? 0 : next; // loop the journey
+      });
+    }, 50);
+    return () => clearInterval(timerRef.current);
+  }, [playing, path, playbackSpeed]);
+
+  // A new storm restarts the journey from the beginning, automatically.
+  useEffect(() => {
+    setProg(0);
+    setPlaying(true);
+    setShowAccuracy(false);
+  }, [nc?.storm?.sid, nc]);
+
+  // Caption follows the playhead.
+  useEffect(() => {
+    setCaption(segInfo ? `${segInfo.label}${segInfo.windWord ? ` · ${segInfo.windWord}` : ''}` : '');
+  }, [segInfo]);
+
+  // (Re-)add nowcast sources/layers after map load and after style switches.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !nc) return undefined;
+
+    const emptyLine = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } };
+    const emptyFC = { type: 'FeatureCollection', features: [] };
+
+    if (!map.getSource('nc-trail')) {
+      map.addSource('nc-trail', { type: 'geojson', data: emptyLine });
+      map.addLayer({
+        id: 'nc-trail-glow',
+        type: 'line',
+        source: 'nc-trail',
+        paint: { 'line-color': '#fbbf24', 'line-width': 12, 'line-blur': 6, 'line-opacity': 0.3 }
+      });
+      map.addLayer({
+        id: 'nc-trail-line',
+        type: 'line',
+        source: 'nc-trail',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#fbbf24', 'line-width': 3.5, 'line-opacity': 0.95 }
+      });
+    }
+    map.getSource('nc-trail').setData(trailCoords.length >= 2
+      ? {
+        type: 'Feature',
+        properties: { head: true },
+        geometry: { type: 'LineString', coordinates: trailCoords }
+      }
+      : emptyLine);
+
+    if (!map.getSource('nc-cone')) {
+      map.addSource('nc-cone', { type: 'geojson', data: coneData });
+      map.addLayer({
+        id: 'nc-cone-fill',
+        type: 'fill',
+        source: 'nc-cone',
+        paint: { 'fill-color': '#34d399', 'fill-opacity': 0.08 }
+      });
+      map.addLayer({
+        id: 'nc-cone-edge',
+        type: 'line',
+        source: 'nc-cone',
+        paint: { 'line-color': '#34d399', 'line-width': 1.2, 'line-opacity': 0.5, 'line-dasharray': [2, 3] }
+      });
+    } else {
+      map.getSource('nc-cone').setData(coneData);
+    }
+
+    if (!map.getSource('nc-verify')) {
+      map.addSource('nc-verify', { type: 'geojson', data: emptyFC });
+      map.addLayer({
+        id: 'nc-verify-line',
+        type: 'line',
+        source: 'nc-verify',
+        filter: ['==', ['get', 'kind'], 'actual'],
+        layout: { 'line-cap': 'round' },
+        paint: { 'line-color': '#38bdf8', 'line-width': 2.5, 'line-opacity': 0.9 }
+      });
+      map.addLayer({
+        id: 'nc-verify-pred',
+        type: 'circle',
+        source: 'nc-verify',
+        filter: ['==', ['get', 'kind'], 'pred'],
+        paint: { 'circle-radius': 5.5, 'circle-color': '#34d399', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 }
+      });
+      map.addLayer({
+        id: 'nc-verify-actual',
+        type: 'circle',
+        source: 'nc-verify',
+        filter: ['==', ['get', 'kind'], 'actual'],
+        paint: { 'circle-radius': 5.5, 'circle-color': '#38bdf8', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 }
+      });
+      map.addLayer({
+        id: 'nc-verify-links',
+        type: 'line',
+        source: 'nc-verify',
+        filter: ['==', ['get', 'kind'], 'link'],
+        paint: { 'line-color': '#94a3b8', 'line-width': 1.2, 'line-dasharray': [2, 2], 'line-opacity': 0.8 }
+      });
+    }
+
+    return undefined;
+  }, [nc, mapReady, styleEpoch, trailCoords]);
+
+  // Push accuracy (model-said vs what-happened) geometry when toggled.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !map.getSource('nc-verify')) return;
+    const pts = (showAccuracy && nc?.geojson?.verify_points?.features) || [];
+    const links = (showAccuracy && nc?.verification?.points || []).map((p) => ({
+      type: 'Feature',
+      properties: { kind: 'link' },
+      geometry: { type: 'LineString', coordinates: [[p.pred[1], p.pred[0]], [p.actual[1], p.actual[0]]] }
+    }));
+    map.getSource('nc-verify').setData({ type: 'FeatureCollection', features: [...pts, ...links] });
+    const vis = showAccuracy ? 'visible' : 'none';
+    ['nc-verify-line', 'nc-verify-pred', 'nc-verify-actual', 'nc-verify-links'].forEach((l) => {
+      if (map.getLayer(l)) map.setLayoutProperty(l, 'visibility', vis);
+    });
+  }, [showAccuracy, nc, mapReady, styleEpoch]);
+
+  // Keep the cone/accuracy toggles in sync with the map (incl. style switch).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const setVis = (layer, visible) => {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+    };
+    setVis('nc-cone-fill', layersVisibility.cone);
+    setVis('nc-cone-edge', layersVisibility.cone);
+  }, [layersVisibility, mapReady, styleEpoch, nc]);
+
+  // The storm itself: a glowing marker riding the playhead.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    if (!markerPos) {
+      if (stormMarkerRef.current) {
+        stormMarkerRef.current.remove();
+        stormMarkerRef.current = null;
+      }
+      return;
+    }
+    const phase = segInfo?.phase || 'observed';
+    const color = phase === 'predicted' ? '#34d399' : '#fbbf24';
+    const html = `
+      <div style="position: relative; transform: translate(-50%, -50%); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
+        <div style="position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed ${color}66; animation: spin 8s linear infinite;"></div>
+        <div style="width: 16px; height: 16px; border-radius: 50%; background: ${color}; border: 2.5px solid #ffffff; box-shadow: 0 0 18px ${color};"></div>
+      </div>`;
+    if (stormMarkerRef.current) {
+      stormMarkerRef.current.setLngLat(markerPos);
+      const el = stormMarkerRef.current.getElement();
+      if (el.dataset.phase !== phase) {
+        el.querySelector('div > div:nth-child(2)').style.background = color;
+        el.querySelector('div > div:nth-child(2)').style.boxShadow = `0 0 18px ${color}`;
+        el.dataset.phase = phase;
+      }
+    } else {
+      const el = document.createElement('div');
+      el.dataset.phase = phase;
+      el.innerHTML = html;
+      stormMarkerRef.current = new maplibregl.Marker({ element: el })
+        .setLngLat(markerPos)
+        .addTo(map);
+    }
+  }, [markerPos, segInfo, mapReady, styleEpoch]);
+
+  // Camera follows the storm while it travels.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !markerPos || !playing) return;
+    camTickRef.current += 1;
+    if (camTickRef.current % 4 !== 0) return; // throttle easeTo to ~5 Hz
+    map.easeTo({ center: markerPos, duration: 260, zoom: Math.max(map.getZoom(), 5.4) });
+  }, [markerPos, playing]);
+
+  useEffect(() => () => {
+    if (stormMarkerRef.current) stormMarkerRef.current.remove();
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, []);
+
   // Toggle Layers
   const toggleLayer = (layerName) => {
     const map = mapRef.current;
@@ -458,75 +752,88 @@ export default function WeatherMap({ telemetry }) {
     }
   };
 
+  const handlePlay = () => {
+    if (prog >= path.length - 1) setProg(0); // replay from the start
+    setPlaying((r) => !r);
+  };
+
+  const handleScrub = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / Math.max(rect.width, 1);
+    setPlaying(false);
+    setProg(clampProg(frac * (path.length - 1)));
+  };
+
+  const fitNowcast = () => {
+    const map = mapRef.current;
+    if (!map || path.length < 2) return;
+    map.fitBounds(path.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(path[0], path[0])), { padding: 70, duration: 900 });
+  };
+
   return (
-    <div className="glass-panel" style={{ position: 'relative', height: '600px', overflow: 'hidden', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+    <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', height: 'auto', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '12px', overflow: 'hidden', background: '#0a0f1d' }}>
       
       {/* Map Canvas */}
-      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+      <div style={{ position: 'relative', height: '500px', width: '100%' }}>
+        <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
-      {/* Sweeping Doppler Radar Canvas Overlay */}
-      <canvas
-        ref={radarCanvasRef}
-        width={900}
-        height={600}
-        style={{
+        {/* Sweeping Doppler Radar Canvas Overlay */}
+        <canvas
+          ref={radarCanvasRef}
+          width={900}
+          height={500}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 4,
+            opacity: 0.85
+          }}
+        />
+
+        {/* Live Satellite / Radar Mode Indicator in Top-Center */}
+        <div style={{
           position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 4,
-          opacity: 0.85
-        }}
-      />
-
-      {/* Live Satellite / Radar Mode Indicator in Top-Center */}
-      <div style={{
-        position: 'absolute',
-        top: '14px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'rgba(10, 15, 29, 0.92)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(56, 189, 248, 0.4)',
-        borderRadius: '20px',
-        padding: '5px 16px',
-        zIndex: 10,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.6)'
-      }}>
-        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} className="pulsing-dot" />
-        <span style={{ fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.04em', color: '#f8fafc', textTransform: 'uppercase' }}>
-          {currentStyle === 'satellite' ? '🛰️ High-Resolution True Earth Satellite' : currentStyle === 'infrared' ? '🌡️ INSAT-3DR Enhanced Thermal Infrared' : '🗺️ OpenFreeMap Vector'}
-        </span>
-        <span className="mono badge-severe" style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px' }}>
-          DWR SWEEP ACTIVE
-        </span>
+          top: '14px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(10, 15, 29, 0.92)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(56, 189, 248, 0.4)',
+          borderRadius: '20px',
+          padding: '5px 16px',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.6)'
+        }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} className="pulsing-dot" />
+          <span style={{ fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.04em', color: '#f8fafc', textTransform: 'uppercase' }}>
+            {currentStyle === 'satellite' ? '🛰️ High-Resolution True Earth Satellite' : currentStyle === 'infrared' ? '🌡️ INSAT-3DR Enhanced Thermal Infrared' : '🗺️ OpenFreeMap Vector'}
+          </span>
+          <span className="mono badge-severe" style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px' }}>
+            DWR SWEEP ACTIVE
+          </span>
+        </div>
       </div>
 
-      {/* Left Control Panel: Basemap Selector & Convective Layers */}
-      <div style={{
-        position: 'absolute',
-        top: '14px',
-        left: '14px',
-        background: 'rgba(10, 15, 29, 0.92)',
-        backdropFilter: 'blur(14px)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: '12px',
-        padding: '12px 14px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-        zIndex: 10,
-        boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
-        maxWidth: '280px'
+      {/* Control Panel Below Map */}
+      <div style={{ 
+        padding: '16px', 
+        background: 'rgba(15, 23, 42, 0.95)', 
+        borderTop: '1px solid rgba(56, 189, 248, 0.25)', 
+        display: 'flex', 
+        flexWrap: 'wrap',
+        gap: '20px',
+        justifyContent: 'space-between'
       }}>
         
         {/* Style Selector */}
-        <div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+        <div style={{ flex: '1 1 200px' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
             EARTH OBSERVATION SENSORS:
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
@@ -596,8 +903,8 @@ export default function WeatherMap({ telemetry }) {
         </div>
 
         {/* Layer Toggles */}
-        <div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+        <div style={{ flex: '2 1 300px' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
             CONVECTIVE OVERLAYS:
           </div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -664,44 +971,143 @@ export default function WeatherMap({ telemetry }) {
             >
               🌀 Radar Sweep
             </button>
+
+            {nowcast?.nowcast && (
+              <>
+                <button
+                  onClick={() => toggleLayer('cone')}
+                  style={{
+                    background: layersVisibility.cone ? 'rgba(52, 211, 153, 0.18)' : '#1e293b',
+                    border: `1px solid ${layersVisibility.cone ? '#34d399' : '#334155'}`,
+                    color: layersVisibility.cone ? '#6ee7b7' : 'var(--text-dim)',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ◌ Uncertainty Cone
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         {/* Legend */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-dim)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px' }}>
-          <span style={{ color: '#ef4444' }}>🔴 &gt;55 dBZ Hail</span>
-          <span style={{ color: '#f97316' }}>🟠 High Risk</span>
-          <span style={{ color: '#eab308' }}>🟡 Advisory</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '12px' }}>
+            <span style={{ color: '#ef4444' }}>🔴 &gt;55 dBZ Hail</span>
+            <span style={{ color: '#f97316' }}>🟠 High Risk</span>
+            <span style={{ color: '#eab308' }}>🟡 Advisory</span>
+          </div>
         </div>
+
+      {/* Storm Centroid Telemetry HUD in Top-Right (ML Nowcast when live data is present) */}
+      {nowcast?.nowcast ? (
+        <div style={{
+          flex: '1 1 250px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.05em', color: '#34d399', textTransform: 'uppercase' }}>
+            Nowcast · {nowcast.nowcast.storm.name} {nowcast.nowcast.storm.season}
+          </div>
+          <select
+            value={nowcast.selectedSid}
+            onChange={(e) => nowcast.selectStorm(e.target.value)}
+            style={{
+              background: '#0f172a',
+              color: '#e2e8f0',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              padding: '6px 8px',
+              fontSize: '0.76rem',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+            aria-label="Choose a real storm to watch"
+          >
+            {(nowcast.storms || []).map((s) => (
+              <option key={s.sid} value={s.sid}>{s.name} · {s.season}</option>
+            ))}
+          </select>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button type="button" onClick={handlePlay} style={{ ...hudBtnStyle, background: playing ? 'rgba(52, 211, 153, 0.4)' : 'rgba(52, 211, 153, 0.18)', padding: '4px 10px' }} aria-label={playing ? 'Pause the storm journey' : 'Play the storm journey'}>
+              {playing ? '⏸ PAUSE' : '▶ PLAY'}
+            </button>
+            <button type="button" onClick={() => { setProg(0); setPlaying(true); }} style={{ ...hudBtnStyle, padding: '4px 10px' }} aria-label="Replay the storm journey">↺ REPLAY</button>
+            <button type="button" onClick={fitNowcast} style={{ ...hudBtnStyle, padding: '4px 10px' }} aria-label="Show the whole journey">⤢ FIT</button>
+            <button
+              type="button"
+              onClick={() => setShowAccuracy((s) => !s)}
+              style={{ ...hudBtnStyle, padding: '4px 10px', background: showAccuracy ? 'rgba(56, 189, 248, 0.35)' : hudBtnStyle.background, borderColor: showAccuracy ? '#38bdf8' : '#34d399', color: showAccuracy ? '#bae6fd' : '#6ee7b7' }}
+              aria-label="Show where the model was checked against reality"
+            >
+              ◎ ACCURACY
+            </button>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+            <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>SPEED:</span>
+            {[0.06, 0.12, 0.24].map((spd) => (
+              <button 
+                key={spd}
+                onClick={() => setPlaybackSpeed(spd)}
+                style={{
+                  ...hudBtnStyle, 
+                  background: playbackSpeed === spd ? 'rgba(56, 189, 248, 0.35)' : 'rgba(56, 189, 248, 0.1)',
+                  borderColor: playbackSpeed === spd ? '#38bdf8' : '#334155',
+                  color: playbackSpeed === spd ? '#fff' : '#38bdf8',
+                  padding: '2px 8px'
+                }}
+              >
+                {spd === 0.06 ? '0.5x' : spd === 0.12 ? '1x' : '2x'}
+              </button>
+            ))}
+          </div>
+
+          <div
+            role="slider"
+            aria-label="Storm journey position"
+            aria-valuemin={0}
+            aria-valuemax={Math.max(path.length - 1, 1)}
+            aria-valuenow={Math.round(prog)}
+            tabIndex={0}
+            onClick={handleScrub}
+            style={{ height: '8px', borderRadius: '4px', background: 'rgba(148, 163, 184, 0.25)', cursor: 'pointer', position: 'relative', marginTop: '6px' }}
+          >
+            <div style={{
+              position: 'absolute', inset: 0, width: `${path.length > 1 ? (prog / (path.length - 1)) * 100 : 0}%`,
+              borderRadius: '4px',
+              background: 'linear-gradient(90deg, #fbbf24 0%, #34d399 100%)'
+            }} />
+          </div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: caption.startsWith('Predicted') ? '#6ee7b7' : '#fbbf24', minHeight: '1.2em' }}>
+            {caption}
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          flex: '1 1 250px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          justifyContent: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+            <Navigation size={18} color="#38bdf8" style={{ transform: `rotate(${storm.direction_deg - 45}deg)` }} />
+            <span className="mono" style={{ fontWeight: 800, color: '#f8fafc' }}>
+              {storm.speed_kmh} km/h • 135° SE
+            </span>
+          </div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            Intensity: <strong style={{ color: '#ef4444' }}>{Math.round((storm.intensity || 0.78) * 100)}% ({storm.stage || 'Rapid Intensification'})</strong>
+          </div>
+        </div>
+      )}
 
       </div>
-
-      {/* Storm Centroid Telemetry HUD in Top-Right */}
-      <div style={{
-        position: 'absolute',
-        top: '14px',
-        right: '54px',
-        background: 'rgba(10, 15, 29, 0.92)',
-        backdropFilter: 'blur(14px)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: '10px',
-        padding: '8px 14px',
-        zIndex: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
-          <Navigation size={14} color="#38bdf8" style={{ transform: `rotate(${storm.direction_deg - 45}deg)` }} />
-          <span className="mono" style={{ fontWeight: 800, color: '#f8fafc' }}>
-            {storm.speed_kmh} km/h • 135° SE
-          </span>
-        </div>
-        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-          Intensity: <strong style={{ color: '#ef4444' }}>{Math.round((storm.intensity || 0.78) * 100)}% ({storm.stage || 'Rapid Intensification'})</strong>
-        </div>
-      </div>
-
     </div>
   );
 }
