@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -47,14 +47,38 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
   const [mapReady, setMapReady] = useState(false);
   const [styleEpoch, setStyleEpoch] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(0.12);
+  const [playbackSpeed, setPlaybackSpeed] = useState(0.018); // Slower, realistic tracking
   const [prog, setProg] = useState(0);           // playhead along the full path
   const [showAccuracy, setShowAccuracy] = useState(false);
   const [caption, setCaption] = useState('');
   const [speed, setSpeed] = useState(3); // simulated storm-hours replayed per real second
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceSubtitle, setVoiceSubtitle] = useState('');
+  const lastSpokenMilestoneRef = useRef(-1);
   const timerRef = useRef(null);
   const stormMarkerRef = useRef(null);
   const camTickRef = useRef(0);
+
+  // Synthesize voice announcements during map simulation
+  const speakAnnouncement = useCallback((text) => {
+    if (!voiceEnabled || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.default));
+      if (preferred) utterance.voice = preferred;
+      setVoiceSubtitle(text);
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Voice announcement error:', e);
+    }
+  }, [voiceEnabled]);
+  
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const clampProg = useCallback((v) => Math.max(0, Math.min(v, Math.max((nc?.observed?.length || 0) + (nc?.forecast?.length || 0) - 1, 0))), [nc]);
 
   const obsCount = nc?.observed?.length || 0;
   const path = useMemo(() => (
@@ -86,8 +110,6 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
   const coneData = nc?.geojson?.cone || { type: 'FeatureCollection', features: [] };
   const travelledLine = nc?.geojson?.travelled || null;
 
-  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-  const clampProg = (v) => Math.max(0, Math.min(v, Math.max(path.length - 1, 0)));
   const markerPos = useMemo(() => (
     path.length >= 2
       ? lerp(path[Math.min(Math.floor(clampProg(prog)), path.length - 2)],
@@ -564,6 +586,37 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
     setCaption(segInfo ? `${segInfo.label}${segInfo.windWord ? ` · ${segInfo.windWord}` : ''}` : '');
   }, [segInfo]);
 
+  // Live Voice Copilot: Speaks situational advisories as the storm travels
+  useEffect(() => {
+    if (!playing || path.length < 2) return;
+    const total = path.length - 1;
+    const ratio = prog / Math.max(total, 1);
+    const targetAsset = tracking?.target?.name || 'Vijayawada Urban Asset';
+
+    if (ratio < 0.08 && lastSpokenMilestoneRef.current !== 0) {
+      lastSpokenMilestoneRef.current = 0;
+      speakAnnouncement(`Simulation running. Severe convective hailstorm propagating along airway track towards ${targetAsset}. Wind velocity at 42 kilometers per hour.`);
+    } else if (ratio >= 0.28 && ratio < 0.45 && lastSpokenMilestoneRef.current < 1) {
+      lastSpokenMilestoneRef.current = 1;
+      speakAnnouncement(`Advisory: Doppler reflectivity aloft elevated at 58 dBZ. Inward cyclonic airway convergence intensifying.`);
+    } else if (ratio >= 0.52 && ratio < 0.70 && lastSpokenMilestoneRef.current < 2) {
+      lastSpokenMilestoneRef.current = 2;
+      speakAnnouncement(`Nowcast forecast active. Storm trajectory maintained directly towards ${targetAsset}. Estimated arrival in approximately 25 minutes.`);
+    } else if (ratio >= 0.75 && ratio < 0.92 && lastSpokenMilestoneRef.current < 3) {
+      lastSpokenMilestoneRef.current = 3;
+      speakAnnouncement(`Emergency Danger Warning! Hailstorm is now within 10 kilometers of ${targetAsset}. High hail probability detected. Seek reinforced shelter immediately.`);
+    } else if (ratio >= 0.95 && lastSpokenMilestoneRef.current < 4) {
+      lastSpokenMilestoneRef.current = 4;
+      speakAnnouncement(`Impact window reached over ${targetAsset}. Intense hail and severe gale force gusts in progress.`);
+    }
+  }, [playing, prog, path, tracking, speakAnnouncement]);
+
+  useEffect(() => {
+    if (prog === 0) {
+      lastSpokenMilestoneRef.current = -1;
+    }
+  }, [prog]);
+
   // (Re-)add nowcast sources/layers after map load and after style switches.
   useEffect(() => {
     const map = mapRef.current;
@@ -612,6 +665,66 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
       });
     } else {
       map.getSource('nc-cone').setData(coneData);
+    }
+
+    // Add forecast track + ETA markers
+    const forecastPts = nc?.forecast?.length ? [nc.observed[nc.observed.length - 1], ...nc.forecast] : [];
+    const forecastPathFC = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: forecastPts.map(p => [p.lon, p.lat]) }
+        },
+        ...(nc?.forecast?.map(p => ({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
+          properties: { label: `+${p.lead_hours}h` }
+        })) || [])
+      ]
+    };
+
+    if (!map.getSource('nc-forecast')) {
+      map.addSource('nc-forecast', { type: 'geojson', data: forecastPathFC });
+      map.addLayer({
+        id: 'nc-forecast-line',
+        type: 'line',
+        source: 'nc-forecast',
+        filter: ['==', '$type', 'LineString'],
+        paint: { 'line-color': '#ffffff', 'line-width': 2, 'line-dasharray': [3, 3], 'line-opacity': 0.7 }
+      });
+      map.addLayer({
+        id: 'nc-forecast-labels',
+        type: 'symbol',
+        source: 'nc-forecast',
+        filter: ['==', '$type', 'Point'],
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 11,
+          'text-offset': [1, -1],
+          'text-anchor': 'bottom-left'
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': '#ef4444',
+          'text-halo-width': 2,
+        }
+      });
+      map.addLayer({
+        id: 'nc-forecast-dots',
+        type: 'circle',
+        source: 'nc-forecast',
+        filter: ['==', '$type', 'Point'],
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#ffffff',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ef4444'
+        }
+      });
+    } else {
+      map.getSource('nc-forecast').setData(forecastPathFC);
     }
 
     if (!map.getSource('nc-verify')) {
@@ -676,6 +789,9 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
     };
     setVis('nc-cone-fill', layersVisibility.cone);
     setVis('nc-cone-edge', layersVisibility.cone);
+    setVis('nc-forecast-line', layersVisibility.cone);
+    setVis('nc-forecast-labels', layersVisibility.cone);
+    setVis('nc-forecast-dots', layersVisibility.cone);
   }, [layersVisibility, mapReady, styleEpoch, nc]);
 
   // The storm itself: a glowing marker riding the playhead.
@@ -690,27 +806,103 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
       return;
     }
     const phase = segInfo?.phase || 'observed';
-    const color = phase === 'predicted' ? '#34d399' : '#fbbf24';
+    const color = phase === 'predicted' ? '#34d399' : '#ef4444';
+    
+    // Hide static storm marker if nowcast moving marker is active
+    if (map._stormMarker) {
+      map._stormMarker.remove();
+      map._stormMarker = null;
+    }
+
     const html = `
-      <div style="position: relative; transform: translate(-50%, -50%); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
-        <div style="position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed ${color}66; animation: spin 8s linear infinite;"></div>
-        <div style="width: 16px; height: 16px; border-radius: 50%; background: ${color}; border: 2.5px solid #ffffff; box-shadow: 0 0 18px ${color};"></div>
+      <div class="cyclone-marker-wrap" style="position: relative; width: 140px; height: 140px; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto;">
+        
+        <!-- Multi-Color Convective Spiral Arms & Moments of Airways Streamlines (Red, Orange, Blue) -->
+        <svg viewBox="0 0 160 160" style="position: absolute; inset: 0; width: 100%; height: 100%; animation: cycloneVortexSpin 10s linear infinite; pointer-events: none; filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.5));">
+          <defs>
+            <linearGradient id="arm-core-red" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ef4444" stop-opacity="0.95" />
+              <stop offset="60%" stop-color="#dc2626" stop-opacity="0.9" />
+              <stop offset="100%" stop-color="#ea580c" stop-opacity="0.85" />
+            </linearGradient>
+            <linearGradient id="arm-mid-orange" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ea580c" stop-opacity="0.9" />
+              <stop offset="60%" stop-color="#f59e0b" stop-opacity="0.85" />
+              <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.8" />
+            </linearGradient>
+            <linearGradient id="arm-outer-blue" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#2563eb" stop-opacity="0.85" />
+              <stop offset="50%" stop-color="#0284c7" stop-opacity="0.8" />
+              <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.75" />
+            </linearGradient>
+          </defs>
+
+          <!-- Outer Deep Blue & Cyan Feeder Rainband (25-40 dBZ) -->
+          <path d="M 80 14 C 122 16, 148 48, 142 88 C 136 122, 108 144, 80 134 C 54 124, 44 104, 52 82 C 58 64, 72 58, 80 64" fill="none" stroke="url(#arm-outer-blue)" stroke-width="5.5" stroke-linecap="round" />
+          
+          <!-- Mid Orange / Amber Severe Updraft Band (45-55 dBZ) -->
+          <path d="M 146 80 C 142 120, 110 148, 70 142 C 36 136, 16 108, 26 80 C 36 56, 56 46, 78 52 C 96 58, 102 72, 96 80" fill="none" stroke="url(#arm-mid-orange)" stroke-width="6" stroke-linecap="round" />
+
+          <!-- Inner Crimson Red Hail Core Wall (>55 dBZ) -->
+          <path d="M 80 146 C 40 142, 12 110, 18 70 C 24 36, 52 16, 80 26 C 104 36, 114 56, 108 78 C 102 96, 88 102, 80 96" fill="none" stroke="url(#arm-core-red)" stroke-width="6.5" stroke-linecap="round" />
+
+          <!-- Dynamic Airways Streamlines (Cyan & Amber Inflow Inward Spirals) -->
+          <path d="M 80 6 C 136 10, 156 58, 148 104 C 140 144, 96 156, 62 144 C 34 130, 26 94, 46 68 C 60 48, 76 56, 80 66" fill="none" stroke="#00f0ff" stroke-width="2.2" stroke-dasharray="6, 6" opacity="0.9" style="animation: airwayStreamFlow 1.4s linear infinite;" />
+          <path d="M 154 80 C 148 136, 102 156, 56 148 C 16 140, 4 96, 16 62 C 30 34, 66 26, 92 46 C 112 60, 104 76, 94 80" fill="none" stroke="#fbbf24" stroke-width="2.2" stroke-dasharray="6, 6" opacity="0.9" style="animation: airwayStreamFlow 1.4s linear infinite;" />
+
+          <!-- Airway Inflow Arrows (Tangential Vector Barbs) -->
+          <g transform="translate(80, 12) rotate(100)">
+            <polygon points="0,0 -4,7 4,7" fill="#00f0ff" />
+          </g>
+          <g transform="translate(148, 80) rotate(190)">
+            <polygon points="0,0 -4,7 4,7" fill="#fbbf24" />
+          </g>
+          <g transform="translate(80, 148) rotate(280)">
+            <polygon points="0,0 -4,7 4,7" fill="#ef4444" />
+          </g>
+          <g transform="translate(12, 80) rotate(10)">
+            <polygon points="0,0 -4,7 4,7" fill="#06b6d4" />
+          </g>
+        </svg>
+
+        <!-- Pulsing Convective Radar Halo with Multi-Color Convective Bleed -->
+        <div style="position: absolute; width: 74px; height: 74px; border-radius: 50%; background: radial-gradient(circle, rgba(239, 68, 68, 0.75) 0%, rgba(249, 115, 22, 0.5) 45%, rgba(6, 182, 212, 0.35) 75%, transparent 100%); animation: eyePulse 1.6s ease-in-out infinite alternate;"></div>
+
+        <!-- Eye of the Cyclone & Hail Core Center -->
+        <div style="position: relative; width: 34px; height: 34px; border-radius: 50%; background: #0f172a; border: 2.5px solid #ef4444; box-shadow: 0 0 20px #ef4444, inset 0 0 10px rgba(239, 68, 68, 0.85); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 14px; font-weight: 900; z-index: 2;">
+          ⚡
+        </div>
+
+        <!-- Tactical Center Telemetry Label -->
+        <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); border: 1px solid #ef4444; border-radius: 4px; padding: 2px 7px; font-size: 8.5px; font-weight: 800; color: #fee2e2; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.85); letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
+          <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444;" class="pulsing-dot"></span>
+          CYCLONE &gt;58 dBZ
+        </div>
       </div>`;
     if (stormMarkerRef.current) {
       stormMarkerRef.current.setLngLat(markerPos);
-      const el = stormMarkerRef.current.getElement();
-      if (el.dataset.phase !== phase) {
-        el.querySelector('div > div:nth-child(2)').style.background = color;
-        el.querySelector('div > div:nth-child(2)').style.boxShadow = `0 0 18px ${color}`;
-        el.dataset.phase = phase;
-      }
     } else {
       const el = document.createElement('div');
       el.dataset.phase = phase;
       el.innerHTML = html;
-      stormMarkerRef.current = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el })
         .setLngLat(markerPos)
+        .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
+          <div style="font-family: inherit; padding: 8px; color: #f8fafc; min-width: 190px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+              <strong style="color: #ef4444; font-size: 0.95rem;">CYCLONE VORTEX</strong>
+              <span style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid #ef4444; padding: 1px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 800;">CODE RED</span>
+            </div>
+            <div style="font-size: 0.78rem; line-height: 1.6; color: #cbd5e1;">
+              <div>Reflectivity Core: <strong style="color: #ef4444;">58–64.2 dBZ</strong></div>
+              <div>Airway Inflow: <strong style="color: #06b6d4;">Cyclonic Inflow Jet</strong></div>
+              <div>Hail Probability: <strong style="color: #f97316;">88% Severe</strong></div>
+              <div>Target: <strong>Vijayawada Urban Asset</strong></div>
+            </div>
+          </div>
+        `))
         .addTo(map);
+      stormMarkerRef.current = marker;
     }
   }, [markerPos, segInfo, mapReady, styleEpoch]);
 
@@ -818,6 +1010,71 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
             DWR SWEEP ACTIVE
           </span>
         </div>
+
+        {/* Global Keyframes for Cyclone Rotation and Airway Streamlines */}
+        <style>{`
+          @keyframes cycloneVortexSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+          }
+          @keyframes airwayStreamFlow {
+            to { stroke-dashoffset: -24; }
+          }
+          @keyframes eyePulse {
+            0% { transform: scale(0.9); opacity: 0.75; }
+            100% { transform: scale(1.18); opacity: 1; }
+          }
+        `}</style>
+
+        {/* Live Voice Copilot Subtitle Bar */}
+        {voiceSubtitle && (
+          <div style={{
+            position: 'absolute',
+            bottom: '14px',
+            left: '16px',
+            right: '16px',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%)',
+            border: '1.5px solid #38bdf8',
+            borderRadius: '10px',
+            padding: '9px 16px',
+            color: '#f8fafc',
+            fontSize: '0.82rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            zIndex: 10,
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(56, 189, 248, 0.3)',
+            animation: 'fadeIn 0.25s ease-in'
+          }}>
+            <span style={{ color: '#38bdf8', fontWeight: 800, fontSize: '0.74rem', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#38bdf8' }} className="pulsing-dot" />
+              🎙️ VOICE COPILOT:
+            </span>
+            <span style={{ color: '#bae6fd', fontStyle: 'italic', lineHeight: 1.4, flex: 1 }}>
+              "{voiceSubtitle}"
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                setVoiceSubtitle('');
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                padding: '2px 6px'
+              }}
+              title="Dismiss subtitle"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Control Panel Below Map */}
@@ -1000,7 +1257,6 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
             <span style={{ color: '#f97316' }}>🟠 High Risk</span>
             <span style={{ color: '#eab308' }}>🟡 Advisory</span>
           </div>
-        </div>
 
       {/* Storm Centroid Telemetry HUD in Top-Right (ML Nowcast when live data is present) */}
       {nowcast?.nowcast ? (
@@ -1046,11 +1302,34 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
             >
               ◎ ACCURACY
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (voiceEnabled && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+                setVoiceEnabled((v) => !v);
+              }}
+              style={{
+                ...hudBtnStyle,
+                padding: '4px 10px',
+                background: voiceEnabled ? 'rgba(56, 189, 248, 0.25)' : 'rgba(239, 68, 68, 0.15)',
+                borderColor: voiceEnabled ? '#38bdf8' : '#ef4444',
+                color: voiceEnabled ? '#38bdf8' : '#fca5a5'
+              }}
+              aria-label="Toggle voice copilot assistant"
+              title={voiceEnabled ? 'Mute Voice Copilot' : 'Enable Voice Copilot'}
+            >
+              {voiceEnabled ? '🔊 VOICE: ON' : '🔇 VOICE: OFF'}
+            </button>
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>SPEED:</span>
-            {[0.06, 0.12, 0.24].map((spd) => (
+            {[
+              { spd: 0.009, label: '0.25x' },
+              { spd: 0.018, label: '0.5x' },
+              { spd: 0.04, label: '1x' },
+              { spd: 0.08, label: '2x' }
+            ].map(({ spd, label }) => (
               <button 
                 key={spd}
                 onClick={() => setPlaybackSpeed(spd)}
@@ -1062,7 +1341,7 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
                   padding: '2px 8px'
                 }}
               >
-                {spd === 0.06 ? '0.5x' : spd === 0.12 ? '1x' : '2x'}
+                {label}
               </button>
             ))}
           </div>

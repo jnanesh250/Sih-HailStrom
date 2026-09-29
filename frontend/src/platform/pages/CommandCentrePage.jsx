@@ -6,6 +6,11 @@ import {
 } from 'lucide-react';
 import '../styles/command.css';
 import WeatherMap from '../../components/WeatherMap.jsx';
+import HailstormPredictions from '../../components/HailstormPredictions.jsx';
+import AIAnalyst from '../../components/AIAnalyst.jsx';
+import ScenarioSimulator from '../../components/ScenarioSimulator.jsx';
+import WhyAlertModal from '../../components/WhyAlertModal.jsx';
+import DangerSirenAlert from '../../components/DangerSirenAlert.jsx';
 import { api } from '../../services/api';
 import { stormWS } from '../../services/websocket';
 import { useNowcast } from '../../services/nowcast';
@@ -195,8 +200,20 @@ export default function CommandCentrePage() {
   const [paused, setPaused] = useState(false);
   const [scenario, setScenario] = useState('Rapid Intensification');
   const [active, setActive] = useState(0);
+  const [activeView, setActiveView] = useState('operations'); // 'operations' | 'hailstorm' | 'simulator'
+  const [selectedEventStorm, setSelectedEventStorm] = useState(null);
+  const [selectedEventNowcast, setSelectedEventNowcast] = useState(null);
+  const [isWhyModalOpen, setIsWhyModalOpen] = useState(false);
   const [sim, setSim] = useState({ intensity: 78, humidity: 80, wind: 38 });
   const [simRunning, setSimRunning] = useState(false);
+
+  const handleEventNowcast = (ncData, stormObj) => {
+    setSelectedEventNowcast(ncData);
+    setSelectedEventStorm(stormObj);
+    if (stormObj?.sid && nowcast.selectStorm) {
+      nowcast.selectStorm(stormObj.sid);
+    }
+  };
 
   const storm = telemetry?.storm;
   const hazards = telemetry?.hazards;
@@ -347,6 +364,9 @@ export default function CommandCentrePage() {
 
   return (
     <div className="ops">
+      {/* Top-Right Corner Danger Siren Pop-up */}
+      <DangerSirenAlert telemetry={telemetry} />
+
       <div className="ops-container ops-pad" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* ---------- Operations strip ---------- */}
         <section className="ops-strip">
@@ -360,7 +380,57 @@ export default function CommandCentrePage() {
               {bearing(storm?.direction_deg)} track at {Math.round(storm?.speed_kmh ?? 0)} km/h
             </p>
           </div>
-          <div className="strip-actions">
+          <div className="strip-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '4px', background: 'rgba(15, 23, 42, 0.8)', padding: '3px', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+              <button
+                type="button"
+                onClick={() => setActiveView('operations')}
+                style={{
+                  background: activeView === 'operations' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                  border: `1px solid ${activeView === 'operations' ? '#38bdf8' : 'transparent'}`,
+                  color: activeView === 'operations' ? '#38bdf8' : '#94a3b8',
+                  padding: '5px 11px',
+                  borderRadius: '6px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                🛰️ Radar & Ops
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('hailstorm')}
+                style={{
+                  background: activeView === 'hailstorm' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                  border: `1px solid ${activeView === 'hailstorm' ? '#38bdf8' : 'transparent'}`,
+                  color: activeView === 'hailstorm' ? '#38bdf8' : '#94a3b8',
+                  padding: '5px 11px',
+                  borderRadius: '6px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                🌩️ Hailstorm Predictions
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('simulator')}
+                style={{
+                  background: activeView === 'simulator' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                  border: `1px solid ${activeView === 'simulator' ? '#38bdf8' : 'transparent'}`,
+                  color: activeView === 'simulator' ? '#38bdf8' : '#94a3b8',
+                  padding: '5px 11px',
+                  borderRadius: '6px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                🔬 What-If Lab
+              </button>
+            </div>
             <label className="select-wrap">
               <span className="visually-hidden">Forecast scenario</span>
               <select value={scenario} onChange={(e) => selectScenario(e.target.value)} disabled={paused}>
@@ -377,45 +447,69 @@ export default function CommandCentrePage() {
           </div>
         </section>
 
-        {/* ---------- Radar + telemetry ---------- */}
-        <div className="operations-grid">
-          <section id="radar" className="radar-shell" aria-label="Live composite weather radar">
-            <div className="radar-host">
-              <WeatherMap telemetry={telemetry} nowcast={nowcast} />
-            </div>
-            <div className="radar-shade" />
-            <div className="radar-topbar">
-              <div>
-                <span className="data-label">Composite observation</span>
-                <h1>Vijayawada Doppler Radar</h1>
-              </div>
-              <span className="live-indicator"><i /> SCAN {lastScan.slice(0, 5)}</span>
-            </div>
-            <div className="radar-readout">
-              <span>RANGE 120 KM</span>
-              <span>ELEV 0.5°</span>
-              <span>RES 250 M</span>
-              <span>SOURCE INSAT-3DR + DWR</span>
-              <span className="rr-ok">{connected ? 'LINK OK' : 'LINK DOWN'}</span>
-            </div>
+        {/* Tab View: Hailstorm Prediction Centre Only */}
+        {activeView === 'hailstorm' && (
+          <section id="hailstorm-view" style={{ animation: 'fadeIn 0.2s ease-in' }}>
+            <HailstormPredictions onEventNowcast={handleEventNowcast} />
           </section>
+        )}
 
-          <aside className="telemetry-rail" aria-label="Live storm telemetry">
-            <div className="panel-heading">
-              <div>
-                <span className="data-label">Storm telemetry</span>
-                <h2>Live sensor fusion</h2>
-              </div>
-              <span className="live-indicator"><i /> {severity}</span>
-            </div>
-            <div className="metrics-grid">
-              <Metric label="Wind velocity" value={weather?.wind_speed_kmh != null ? Math.round(weather.wind_speed_kmh * 10) / 10 : '—'} unit="KM/H" detail={`${bearing(storm?.direction_deg)} track`} />
-              <Metric label="Pressure" value={weather?.pressure_hpa != null ? weather.pressure_hpa.toFixed(1) : '—'} unit="HPA" detail={weather?.temperature_c != null ? `${Math.round(weather.temperature_c)}°C surface` : 'Surface analysis'} tone="danger" />
-              <Metric label="CAPE" value={weather?.cape_j_kg != null ? Math.round(weather.cape_j_kg) : '—'} unit="J/KG" detail="Instability fuel" tone="rain" />
-              <Metric label="Lightning" value={strikes ?? '—'} unit="STR/MIN" detail={lightning?.lightning_jump_detected ? 'Jump detected' : 'CG frequent'} tone="warning" />
-            </div>
-            <Advisor disabled={!connected} />
-            <div className="warning-log">
+        {/* Tab View: Interactive What-If Simulator Only */}
+        {activeView === 'simulator' && (
+          <section id="simulator-view" style={{ animation: 'fadeIn 0.2s ease-in' }}>
+            <ScenarioSimulator
+              storm={storm}
+              weather={weather}
+              onUpdateState={(newState) => setTelemetry(newState)}
+            />
+          </section>
+        )}
+
+        {/* Primary Operations Centre (Radar + AI Analyst + Diagnostics + Event Catalogue) */}
+        {activeView === 'operations' && (
+          <>
+            <div className="operations-grid">
+              <section id="radar" className="radar-shell" aria-label="Live composite weather radar">
+                <div className="radar-host">
+                  <WeatherMap telemetry={telemetry} nowcast={nowcast} />
+                </div>
+                <div className="radar-shade" />
+                <div className="radar-topbar">
+                  <div>
+                    <span className="data-label">Composite observation</span>
+                    <h1>Vijayawada Doppler Radar</h1>
+                  </div>
+                  <span className="live-indicator"><i /> SCAN {lastScan.slice(0, 5)}</span>
+                </div>
+                <div className="radar-readout">
+                  <span>RANGE 120 KM</span>
+                  <span>ELEV 0.5°</span>
+                  <span>RES 250 M</span>
+                  <span>SOURCE INSAT-3DR + DWR</span>
+                  <span className="rr-ok">{connected ? 'LINK OK' : 'LINK DOWN'}</span>
+                </div>
+              </section>
+
+              <aside className="telemetry-rail" aria-label="Live storm telemetry">
+                <div className="panel-heading">
+                  <div>
+                    <span className="data-label">Storm telemetry</span>
+                    <h2>Live sensor fusion</h2>
+                  </div>
+                  <span className="live-indicator"><i /> {severity}</span>
+                </div>
+                <div className="metrics-grid">
+                  <Metric label="Wind velocity" value={weather?.wind_speed_kmh != null ? Math.round(weather.wind_speed_kmh * 10) / 10 : '—'} unit="KM/H" detail={`${bearing(storm?.direction_deg)} track`} />
+                  <Metric label="Pressure" value={weather?.pressure_hpa != null ? weather.pressure_hpa.toFixed(1) : '—'} unit="HPA" detail={weather?.temperature_c != null ? `${Math.round(weather.temperature_c)}°C surface` : 'Surface analysis'} tone="danger" />
+                  <Metric label="CAPE" value={weather?.cape_j_kg != null ? Math.round(weather.cape_j_kg) : '—'} unit="J/KG" detail="Instability fuel" tone="rain" />
+                  <Metric label="Lightning" value={strikes ?? '—'} unit="STR/MIN" detail={lightning?.lightning_jump_detected ? 'Jump detected' : 'CG frequent'} tone="warning" />
+                </div>
+                <AIAnalyst
+                  onOpenWhyAlert={() => setIsWhyModalOpen(true)}
+                  eventNowcast={selectedEventNowcast}
+                  eventStorm={selectedEventStorm}
+                />
+                <div className="warning-log">
               <div className="panel-heading">
                 <div>
                   <span className="data-label">Warning log</span>
@@ -557,75 +651,33 @@ export default function CommandCentrePage() {
           </div>
         </section>
 
-        {/* ---------- Simulator ---------- */}
-        <section id="simulator" className="instrument-panel simulator-grid">
-          <div>
-            <span className="data-label">Scenario laboratory</span>
-            <h2 className="section-title">Atmospheric what-if simulator</h2>
-            <p className="sim-intro">
-              Adjust the environmental inputs and the Random Forest model recalculates hail,
-              lightning and downburst probabilities for this cell. Running a simulation replaces the
-              live view until the feed resumes.
-            </p>
-            <div className="sim-controls">
-              {[
-                ['intensity', 'Convective core intensity', '%', 20, 100, ThermometerSun],
-                ['humidity', 'Relative humidity', '%', 40, 98, CloudLightning],
-                ['wind', 'Surface inflow wind', 'KM/H', 15, 90, Wind],
-              ].map(([key, label, unit, min, max, Icon]) => (
-                <label key={key} className="sim-control">
-                  <span className="sim-label">
-                    <Icon size={15} /> {label}
-                  </span>
-                  <b>
-                    {sim[key]} {unit}
-                  </b>
-                  <input
-                    type="range"
-                    min={min}
-                    max={max}
-                    value={sim[key]}
-                    onChange={(e) => setSim((s) => ({ ...s, [key]: Number(e.target.value) }))}
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="simulation-output">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="data-label">Projected outcome</span>
-              <span className="model-badge">{simRunning ? 'RUNNING…' : 'MODEL READY'}</span>
-            </div>
-            <div className="score-gauge">
-              <div style={{ '--score': `${Math.min(100, simScore) * 3.6}deg` }}>
-                <span>
-                  <strong>{Math.min(100, simScore)}</strong>
-                  <small>/ 100</small>
-                </span>
-              </div>
-            </div>
-            <div className="output-grid">
-              <div><span>Hail</span><b>{Math.round(simScore * 0.46)}%</b></div>
-              <div><span>Lightning</span><b>{Math.round(simScore * 0.72)}%</b></div>
-              <div><span>Downburst</span><b>{Math.round(simScore * 0.61)}%</b></div>
-            </div>
-            <div className="sim-actions">
-              <button type="button" className="btn btn--default" onClick={runSim} disabled={simRunning}>
-                <Sparkles size={14} />
-                {simRunning ? 'Running model…' : 'Run simulation'}
-              </button>
-              <button type="button" className="btn btn--outline btn--icon" aria-label="Reset simulator" onClick={resetSim} disabled={simRunning}>
-                <RotateCcw size={14} />
-              </button>
-            </div>
-          </div>
+        {/* ---------- Hailstorm Event Predictions & ML Nowcasting ---------- */}
+        <section id="hailstorm-centre">
+          <HailstormPredictions onEventNowcast={handleEventNowcast} />
         </section>
+
+        {/* ---------- Interactive Atmospheric Scenario Simulator (with Auto-Play Cycling) ---------- */}
+        <section id="simulator">
+          <ScenarioSimulator
+            storm={storm}
+            weather={weather}
+            onUpdateState={(newState) => setTelemetry(newState)}
+          />
+        </section>
+      </>
+    )}
 
         <div className="data-footnote">
           <span><Database size={12} /> INSAT-3DR · Doppler weather radar · lightning network</span>
           <span><Gauge size={12} /> Updated {lastScan} IST · Cell {storm?.storm_id || '—'}</span>
         </div>
       </div>
+
+      <WhyAlertModal
+        isOpen={isWhyModalOpen}
+        onClose={() => setIsWhyModalOpen(false)}
+        telemetry={telemetry}
+      />
 
       <SiteFooter
         note={

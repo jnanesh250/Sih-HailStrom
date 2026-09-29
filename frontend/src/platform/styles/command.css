@@ -372,10 +372,10 @@
 /* ---------- Telemetry rail ---------- */
 .ops .telemetry-rail {
   overflow: hidden;
-  border: 1px solid var(--ops-border);
-  border-radius: calc(var(--ops-radius) + 2px);
-  background: color-mix(in oklab, var(--ops-card) 92%, transparent);
-  box-shadow: var(--ops-shadow-panel);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #090e1c 0%, #0d1527 100%);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
@@ -387,23 +387,26 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--ops-border);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+  background: rgba(10, 16, 32, 0.95);
 }
 .ops .panel-heading h2,
 .ops .section-header h2 {
   margin: 0.25rem 0 0;
   font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: #f8fafc;
 }
 .ops .metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  background: rgba(5, 9, 20, 0.65);
 }
 .ops .metric-cell {
-  min-height: 8rem;
-  border-right: 1px solid var(--ops-border);
-  border-bottom: 1px solid var(--ops-border);
+  min-height: 7.5rem;
+  border-right: 1px solid rgba(56, 189, 248, 0.15);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.15);
   padding: 0.85rem 1rem;
 }
 .ops .metric-cell:nth-child(even) {
@@ -411,30 +414,33 @@
 }
 .ops .metric-cell strong {
   display: block;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
   font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  font-size: 1.5rem;
-  color: var(--ops-primary);
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: -0.02em;
 }
 .ops .metric-cell .unit {
   font-family: 'Space Grotesk', ui-monospace, monospace;
   font-size: 10px;
-  color: var(--ops-muted-foreground);
+  font-weight: 700;
+  color: #94a3b8;
 }
 .ops .metric-cell .detail {
   display: block;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
   font-size: 10px;
-  color: var(--ops-muted-foreground);
+  color: #64748b;
 }
 .ops .metric--danger strong {
-  color: var(--ops-danger);
+  color: #ef4444;
 }
 .ops .metric--rain strong {
-  color: var(--ops-rain);
+  color: #38bdf8;
 }
 .ops .metric--warning strong {
-  color: var(--ops-warning);
+  color: #f59e0b;
 }
 .ops .advisory-block {
   padding: 1rem;
@@ -569,48 +575,60 @@
   margin-top: 0.75rem;
 }
 .ops .warning-log {
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.6rem;
+  background: rgba(7, 11, 22, 0.95);
+  border-top: 1px solid rgba(56, 189, 248, 0.15);
 }
 .ops .warning-log .panel-heading {
   border-bottom: 0;
+  background: transparent;
 }
 .ops .count-badge {
   border-radius: 999px;
-  background: color-mix(in oklab, var(--ops-danger) 10%, transparent);
-  padding: 0.2rem 0.45rem;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 0.2rem 0.55rem;
   font-family: 'Space Grotesk', ui-monospace, monospace;
-  font-size: 0.56rem;
-  color: var(--ops-danger);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #f87171;
 }
 .ops .warning-item {
   display: grid;
-  grid-template-columns: 2.8rem 1fr;
-  gap: 0.65rem;
-  margin: 0 1rem 0.5rem;
-  border-left: 3px solid var(--ops-warning);
-  background: color-mix(in oklab, var(--ops-warning) 6%, transparent);
-  padding: 0.55rem 0.65rem;
+  grid-template-columns: 3rem 1fr;
+  gap: 0.75rem;
+  margin: 0 1rem 0.55rem;
+  border-left: 3px solid #f59e0b;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-left-width: 3px;
+  border-left-color: #f59e0b;
+  padding: 0.6rem 0.75rem;
 }
 .ops .warning-item b {
   font-family: 'Space Grotesk', ui-monospace, monospace;
-  font-size: 0.6rem;
-  color: var(--ops-warning);
+  font-size: 0.64rem;
+  color: #f59e0b;
+  font-weight: 700;
 }
-.ops .warning-item strong,
+.ops .warning-item strong {
+  display: block;
+  font-size: 0.74rem;
+  color: #f8fafc;
+}
 .ops .warning-item small {
   display: block;
-  font-size: 0.66rem;
-}
-.ops .warning-item small {
   margin-top: 0.15rem;
-  color: var(--ops-muted-foreground);
+  font-size: 0.66rem;
+  color: #94a3b8;
 }
 .ops .warning-item--critical {
-  border-color: var(--ops-danger);
-  background: color-mix(in oklab, var(--ops-danger) 5%, transparent);
+  border-left-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.12);
 }
 .ops .warning-item--critical b {
-  color: var(--ops-danger);
+  color: #ef4444;
 }
 
 /* ---------- Hazard matrix ---------- */

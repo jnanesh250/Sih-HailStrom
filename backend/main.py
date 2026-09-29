@@ -54,6 +54,7 @@ class ControlRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    nowcast_briefing: Optional[str] = None
 
 # Endpoints
 @app.get("/")
@@ -241,6 +242,9 @@ def explain_alert():
 def chat_ai(req: ChatRequest):
     """Ask StormSense AI — grounded Q&A over the engine's structured output."""
     assessment = _engine_assessment()
+    if req.nowcast_briefing:
+        assessment["nowcast_context"] = req.nowcast_briefing
+        
     answer = sim_manager.grok_svc.chat(req.message, assessment)
     return {
         "response": answer,
