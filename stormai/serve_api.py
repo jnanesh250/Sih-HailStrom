@@ -611,4 +611,3 @@ def nowcast_chat(sid: str, req: Optional[NowcastChatRequest] = None, q: Optional
         "verification": verify,
         "briefing": briefing,
     }
-
