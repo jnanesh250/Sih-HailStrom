@@ -12,12 +12,15 @@ from typing import Dict, Any, Optional
 load_dotenv()
 
 from services.simulation_manager import SimulationManager
+from services.auth_service import AuthService
 
 sim_manager = SimulationManager()
+auth_service = AuthService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start the continuous simulation background task
+    auth_service.ensure_admin()
     task = asyncio.create_task(sim_manager.simulation_loop())
     yield
     task.cancel()
@@ -56,6 +59,10 @@ class ChatRequest(BaseModel):
     message: str
     nowcast_briefing: Optional[str] = None
 
+class LoginRequest(BaseModel):
+    identity: str
+    password: str
+
 # Endpoints
 @app.get("/")
 def root():
@@ -65,6 +72,17 @@ def root():
         "docs_url": "/docs",
         "websocket_url": "/ws/live"
     }
+
+@app.post("/api/auth/login")
+def login(req: LoginRequest):
+    """Authenticate the portal administrator by username or email against MongoDB."""
+    try:
+        user = auth_service.authenticate(req.identity.strip(), req.password)
+    except ConnectionError:
+        raise HTTPException(status_code=503, detail="Authentication database is unavailable. Start MongoDB and try again.")
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username/email or password.")
+    return {"authenticated": True, "user": user}
 
 @app.get("/api/storms")
 def get_storms():

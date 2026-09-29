@@ -255,6 +255,21 @@
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--gov-saffron) 20%, transparent);
   flex: none;
 }
+.gov-admin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--gov-primary);
+  background: #fff;
+  color: var(--gov-primary);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gov-admin-button:hover { background: var(--gov-secondary); }
 @media (prefers-reduced-motion: no-preference) {
   .gov-status.is-live .gov-status-dot {
     animation: gov-pulse 2.2s ease-in-out infinite;

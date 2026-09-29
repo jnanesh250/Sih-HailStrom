@@ -381,14 +381,14 @@ export default function CommandCentrePage() {
             </p>
           </div>
           <div className="strip-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: '4px', background: 'rgba(15, 23, 42, 0.8)', padding: '3px', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+            <div style={{ display: 'flex', gap: '4px', background: '#e8f3f8', padding: '4px', borderRadius: '8px', border: '1px solid #b9d7e5', boxShadow: '0 1px 3px rgba(8, 17, 32, 0.08)' }}>
               <button
                 type="button"
                 onClick={() => setActiveView('operations')}
                 style={{
-                  background: activeView === 'operations' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                  border: `1px solid ${activeView === 'operations' ? '#38bdf8' : 'transparent'}`,
-                  color: activeView === 'operations' ? '#38bdf8' : '#94a3b8',
+                  background: activeView === 'operations' ? '#0e9fce' : '#ffffff',
+                  border: `1px solid ${activeView === 'operations' ? '#0b7fa3' : '#d4dbe5'}`,
+                  color: activeView === 'operations' ? '#ffffff' : '#29405c',
                   padding: '5px 11px',
                   borderRadius: '6px',
                   fontSize: '0.74rem',
@@ -402,9 +402,9 @@ export default function CommandCentrePage() {
                 type="button"
                 onClick={() => setActiveView('hailstorm')}
                 style={{
-                  background: activeView === 'hailstorm' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                  border: `1px solid ${activeView === 'hailstorm' ? '#38bdf8' : 'transparent'}`,
-                  color: activeView === 'hailstorm' ? '#38bdf8' : '#94a3b8',
+                  background: activeView === 'hailstorm' ? '#0e9fce' : '#ffffff',
+                  border: `1px solid ${activeView === 'hailstorm' ? '#0b7fa3' : '#d4dbe5'}`,
+                  color: activeView === 'hailstorm' ? '#ffffff' : '#29405c',
                   padding: '5px 11px',
                   borderRadius: '6px',
                   fontSize: '0.74rem',
@@ -418,9 +418,9 @@ export default function CommandCentrePage() {
                 type="button"
                 onClick={() => setActiveView('simulator')}
                 style={{
-                  background: activeView === 'simulator' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                  border: `1px solid ${activeView === 'simulator' ? '#38bdf8' : 'transparent'}`,
-                  color: activeView === 'simulator' ? '#38bdf8' : '#94a3b8',
+                  background: activeView === 'simulator' ? '#0e9fce' : '#ffffff',
+                  border: `1px solid ${activeView === 'simulator' ? '#0b7fa3' : '#d4dbe5'}`,
+                  color: activeView === 'simulator' ? '#ffffff' : '#29405c',
                   padding: '5px 11px',
                   borderRadius: '6px',
                   fontSize: '0.74rem',
@@ -460,6 +460,8 @@ export default function CommandCentrePage() {
             <ScenarioSimulator
               storm={storm}
               weather={weather}
+              telemetry={telemetry}
+              nowcast={nowcast}
               onUpdateState={(newState) => setTelemetry(newState)}
             />
           </section>
@@ -544,12 +546,7 @@ export default function CommandCentrePage() {
               </div>
               <span className="hazard-note">Real record replayed · forecast path on the map is the model's</span>
             </div>
-            <p style={{
-              margin: '10px 0 8px',
-              fontSize: '0.95rem',
-              lineHeight: 1.65,
-              color: 'var(--text-bright, #e2e8f0)',
-            }}>
+            <p className="briefing-copy">
               {nowcast.nowcast.briefing}
             </p>
             <p className="hazard-note" style={{ opacity: 0.75 }}>

@@ -47,7 +47,7 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
   const [mapReady, setMapReady] = useState(false);
   const [styleEpoch, setStyleEpoch] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(0.018); // Slower, realistic tracking
+  const [playbackSpeed, setPlaybackSpeed] = useState(0.006); // Slow enough to inspect the prediction path.
   const [prog, setProg] = useState(0);           // playhead along the full path
   const [showAccuracy, setShowAccuracy] = useState(false);
   const [caption, setCaption] = useState('');
@@ -818,7 +818,7 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
       <div class="cyclone-marker-wrap" style="position: relative; width: 140px; height: 140px; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto;">
         
         <!-- Multi-Color Convective Spiral Arms & Moments of Airways Streamlines (Red, Orange, Blue) -->
-        <svg viewBox="0 0 160 160" style="position: absolute; inset: 0; width: 100%; height: 100%; animation: cycloneVortexSpin 10s linear infinite; pointer-events: none; filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.5));">
+        <svg viewBox="0 0 160 160" style="display: none;">
           <defs>
             <linearGradient id="arm-core-red" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#ef4444" stop-opacity="0.95" />
@@ -866,10 +866,10 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
         </svg>
 
         <!-- Pulsing Convective Radar Halo with Multi-Color Convective Bleed -->
-        <div style="position: absolute; width: 74px; height: 74px; border-radius: 50%; background: radial-gradient(circle, rgba(239, 68, 68, 0.75) 0%, rgba(249, 115, 22, 0.5) 45%, rgba(6, 182, 212, 0.35) 75%, transparent 100%); animation: eyePulse 1.6s ease-in-out infinite alternate;"></div>
+        <div style="position: absolute; width: 106px; height: 106px; border-radius: 50%; background: radial-gradient(circle, #ef4444 0 24%, #f97316 25% 47%, #facc15 48% 69%, rgba(250, 204, 21, 0.18) 70% 82%, transparent 83%); box-shadow: 0 0 22px rgba(239, 68, 68, 0.8), 0 0 38px rgba(250, 204, 21, 0.42); animation: eyePulse 3.6s ease-in-out infinite alternate;"></div>
 
         <!-- Eye of the Cyclone & Hail Core Center -->
-        <div style="position: relative; width: 34px; height: 34px; border-radius: 50%; background: #0f172a; border: 2.5px solid #ef4444; box-shadow: 0 0 20px #ef4444, inset 0 0 10px rgba(239, 68, 68, 0.85); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 14px; font-weight: 900; z-index: 2;">
+        <div style="position: relative; width: 32px; height: 32px; border-radius: 50%; background: #ef4444; border: 2px solid #fee2e2; box-shadow: 0 0 14px #ef4444; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 13px; font-weight: 900; z-index: 2;">
           ⚡
         </div>
 
@@ -895,7 +895,7 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
             </div>
             <div style="font-size: 0.78rem; line-height: 1.6; color: #cbd5e1;">
               <div>Reflectivity Core: <strong style="color: #ef4444;">58–64.2 dBZ</strong></div>
-              <div>Airway Inflow: <strong style="color: #06b6d4;">Cyclonic Inflow Jet</strong></div>
+          <div>Radar bands: <strong style="color: #facc15;">Red core · orange · yellow</strong></div>
               <div>Hail Probability: <strong style="color: #f97316;">88% Severe</strong></div>
               <div>Target: <strong>Vijayawada Urban Asset</strong></div>
             </div>
@@ -1021,8 +1021,8 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
             to { stroke-dashoffset: -24; }
           }
           @keyframes eyePulse {
-            0% { transform: scale(0.9); opacity: 0.75; }
-            100% { transform: scale(1.18); opacity: 1; }
+            0% { transform: scale(0.94); opacity: 0.82; }
+            100% { transform: scale(1.06); opacity: 1; }
           }
         `}</style>
 
@@ -1325,8 +1325,8 @@ export default function WeatherMap({ telemetry, nowcast, overlays }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>SPEED:</span>
             {[
-              { spd: 0.009, label: '0.25x' },
-              { spd: 0.018, label: '0.5x' },
+              { spd: 0.003, label: '0.25x' },
+              { spd: 0.006, label: '0.5x' },
               { spd: 0.04, label: '1x' },
               { spd: 0.08, label: '2x' }
             ].map(({ spd, label }) => (

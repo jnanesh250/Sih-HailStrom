@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock3, Menu, X } from 'lucide-react';
+import { Clock3, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import Emblem from './Emblem.jsx';
 import { useRoute } from '../router.jsx';
 import { api } from '../../services/api';
@@ -27,10 +27,7 @@ const SECTIONS = {
     { id: 'forecast', label: 'Nowcast', caption: '0–6 hour' },
     { id: 'simulator', label: 'Simulator', caption: 'What-if lab' },
   ],
-  '/architecture': [
-    { id: 'overview', label: 'Data sources', caption: 'Inputs' },
-    { id: 'intelligence', label: 'Nowcast engine', caption: 'Analysis' },
-  ],
+  '/architecture': [],
 };
 
 /* Build the nav model from the current route so section links and the
@@ -55,10 +52,11 @@ function useIstClock() {
   return time;
 }
 
-export default function SiteHeader() {
+export default function SiteHeader({ loginOnly = false }) {
   const { path } = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
   const [live, setLive] = useState(false);
+  const user = JSON.parse(sessionStorage.getItem('stormsense_user') || 'null');
   const istTime = useIstClock();
 
   /* Backend reachability for the live status pill (old core health). */
@@ -132,8 +130,8 @@ export default function SiteHeader() {
         </div>
       </div>
 
-      {/* ---------- Nav band ---------- */}
-      <nav className="gov-navband" aria-label="Main navigation">
+      {/* The login screen retains the institutional header but intentionally hides navigation. */}
+      {!loginOnly && <nav className="gov-navband" aria-label="Main navigation">
         <div className={`gov-container gov-nav-inner${menuOpen ? ' nav-open' : ''}`}>
           {nav.map((item) => {
             const active = item.section ? false : isRouteActive(item);
@@ -165,9 +163,17 @@ export default function SiteHeader() {
               <span className="gov-status-dot" aria-hidden="true" />
               {live ? 'Live data · StormSense core' : 'Core offline · demonstration data'}
             </span>
+            <button
+              type="button"
+              className="gov-admin-button"
+              title={`Signed in as ${user?.username || 'administrator'}. Sign out.`}
+              onClick={() => { sessionStorage.removeItem('stormsense_user'); window.location.hash = '/admin-login'; }}
+            >
+              <ShieldCheck size={13} /> {user?.username || 'Admin'} <LogOut size={13} aria-label="Sign out" />
+            </button>
           </span>
         </div>
-      </nav>
+      </nav>}
     </header>
   );
 }

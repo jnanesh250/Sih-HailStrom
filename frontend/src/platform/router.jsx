@@ -39,5 +39,6 @@ export function matchRoute(path) {
   if (path === '/' || path === '') return { name: 'home' };
   if (path.startsWith('/command-centre')) return { name: 'command-centre' };
   if (path.startsWith('/architecture')) return { name: 'architecture' };
+  if (path.startsWith('/admin-login')) return { name: 'admin-login' };
   return { name: 'not-found' };
 }

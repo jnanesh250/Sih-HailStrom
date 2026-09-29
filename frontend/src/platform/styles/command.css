@@ -10,24 +10,24 @@
 .ops {
   /* Design tokens (verbatim from the source repo) */
   --ops-radius: 0.375rem;
-  --ops-background: oklch(0.982 0.008 232);
-  --ops-foreground: oklch(0.235 0.052 244);
-  --ops-card: oklch(1 0 0 / 82%);
-  --ops-primary: oklch(0.43 0.095 233);
+  --ops-background: #f7f9fc;
+  --ops-foreground: #0d1b2e;
+  --ops-card: #ffffff;
+  --ops-primary: #0e9fce;
   --ops-primary-foreground: oklch(0.99 0.004 230);
-  --ops-secondary: oklch(0.94 0.025 222);
-  --ops-muted: oklch(0.935 0.015 230);
-  --ops-muted-foreground: oklch(0.49 0.044 240);
-  --ops-accent: oklch(0.86 0.055 207);
-  --ops-destructive: oklch(0.56 0.205 25);
-  --ops-border: oklch(0.86 0.035 226);
-  --ops-input: oklch(0.81 0.04 224);
-  --ops-ring: oklch(0.57 0.105 215);
-  --ops-success: oklch(0.57 0.14 159);
-  --ops-warning: oklch(0.7 0.17 70);
-  --ops-danger: oklch(0.56 0.205 25);
-  --ops-rain: oklch(0.54 0.13 243);
-  --ops-electric: oklch(0.64 0.15 302);
+  --ops-secondary: #e8f3f8;
+  --ops-muted: #e8ecf2;
+  --ops-muted-foreground: #51637d;
+  --ops-accent: #dff4fb;
+  --ops-destructive: #c62828;
+  --ops-border: #c3d6e2;
+  --ops-input: #aebdcc;
+  --ops-ring: #0e9fce;
+  --ops-success: #0d8a5f;
+  --ops-warning: #b45309;
+  --ops-danger: #c62828;
+  --ops-rain: #0b7fa3;
+  --ops-electric: #7c3eaa;
   --ops-shadow-panel: 0 10px 30px color-mix(in oklab, var(--ops-primary) 9%, transparent),
     0 1px 3px color-mix(in oklab, var(--ops-foreground) 7%, transparent);
   --ops-shadow-lift: 0 16px 46px color-mix(in oklab, var(--ops-primary) 14%, transparent);
@@ -738,6 +738,54 @@
   font-size: 10px;
   color: var(--ops-muted-foreground);
 }
+
+/* Clear, portal-aligned visual hierarchy for the briefing, hazards and forecast. */
+.ops .hazard-section > .section-header--flow,
+.ops .instrument-panel > .section-header--flow {
+  padding: 0.9rem 1rem;
+  border: 1px solid #122742;
+  border-left: 5px solid #0e9fce;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(100deg, #081120, #122742);
+}
+.ops .hazard-section > .section-header--flow .data-label,
+.ops .instrument-panel > .section-header--flow .data-label { color: #7dd8f0; }
+.ops .hazard-section > .section-header--flow .section-title,
+.ops .instrument-panel > .section-header--flow .section-title { color: #ffffff; font-size: 1rem; }
+.ops .hazard-section > .section-header--flow .hazard-note,
+.ops .instrument-panel > .section-header--flow .hazard-note { color: #c9deed; }
+.ops .briefing-copy {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid #c3d6e2;
+  border-top: 0;
+  background: #ffffff;
+  color: #29405c;
+  font-size: .94rem;
+  line-height: 1.7;
+  box-shadow: 0 4px 14px rgba(8,17,32,.06);
+}
+.ops .hazard-grid { gap: 1rem; margin-top: 1rem; }
+.ops .hazard-card {
+  min-height: 205px;
+  border: 1px solid color-mix(in srgb, var(--ops-tone) 35%, #c3d6e2);
+  border-top: 5px solid var(--ops-tone);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #ffffff 55%, color-mix(in srgb, var(--ops-tone) 9%, #ffffff));
+  box-shadow: 0 8px 20px rgba(8,17,32,.10);
+}
+.ops .hazard-card:hover { transform: translateY(-3px); box-shadow: 0 13px 25px rgba(8,17,32,.16); }
+.ops .hazard-icon { width: 2.35rem; height: 2.35rem; border-radius: 9px; }
+.ops .hazard-state { padding: .3rem .55rem; border: 1px solid color-mix(in srgb, var(--ops-tone) 32%, transparent); }
+.ops .hazard-label { color: #29405c; font-size: .78rem; font-weight: 750; }
+.ops .hazard-value strong { font-size: 2.15rem; }
+.ops .prob-track { height: .45rem; background: #dfe9ef; }
+.ops .hazard-detail { color: #51637d; font-size: .69rem; }
+.ops .instrument-panel { padding: 0; overflow: hidden; border-radius: 12px; background: #ffffff; }
+.ops .instrument-panel .forecast-summary { margin: 1rem; border-radius: 8px; background: #eef7fb; }
+.ops .forecast-summary > div { padding: .8rem 1rem; }
+.ops .forecast-summary strong { color: #0d1b2e; font-size: 1.05rem; }
+.ops .instrument-panel .chart-frame { margin: 1rem; }
 
 /* ---------- Instrument panel / forecast ---------- */
 .ops .instrument-panel {

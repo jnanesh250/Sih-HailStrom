@@ -8,11 +8,13 @@ import { useRoute, matchRoute } from './router.jsx';
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
 const ArchitecturePage = lazy(() => import('./pages/ArchitecturePage.jsx'));
 const CommandCentrePage = lazy(() => import('./pages/CommandCentrePage.jsx'));
+const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
 
 const TITLES = {
   home: 'StormSense | Real-Time Weather Intelligence & Nowcasting',
   'command-centre': 'Command Centre | StormSense',
   architecture: 'Explore Architecture | StormSense',
+  'admin-login': 'Administration Login | StormSense',
   'not-found': 'Page Not Found | StormSense',
 };
 
@@ -35,7 +37,10 @@ function NotFound() {
 
 export default function PlatformApp() {
   const { path } = useRoute();
-  const route = matchRoute(path);
+  const hasSession = Boolean(sessionStorage.getItem('stormsense_user'));
+  const requestedRoute = matchRoute(path);
+  // The portal is private: visitors authenticate before seeing any platform page.
+  const route = hasSession ? requestedRoute : { name: 'admin-login' };
   const mainRef = useRef(null);
 
   /* Route side-effects: title, scroll reset (unless the URL carries an
@@ -51,16 +56,17 @@ export default function PlatformApp() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader loginOnly={route.name === 'admin-login'} />
       <main id="main-content" ref={mainRef} tabIndex={-1} style={{ outline: 'none' }}>
         <Suspense fallback={<div className="ss-loading" role="status">Loading StormSense…</div>}>
           {route.name === 'home' && <HomePage />}
           {route.name === 'command-centre' && <CommandCentrePage />}
           {route.name === 'architecture' && <ArchitecturePage />}
+          {route.name === 'admin-login' && <LoginPage />}
           {route.name === 'not-found' && <NotFound />}
         </Suspense>
       </main>
-      <SiteFooter />
+      {route.name !== 'admin-login' && <SiteFooter />}
     </>
   );
 }

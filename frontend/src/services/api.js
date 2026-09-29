@@ -15,6 +15,7 @@ export const api = {
   // What-If Simulator
   simulateWhatIf: (params) => http.post(`${API_BASE}/api/simulate`, params),
   resetWhatIf: () => http.post(`${API_BASE}/api/simulate/reset`),
+  login: (identity, password) => http.post(`${API_BASE}/api/auth/login`, { identity, password }),
 
   // Scenarios & Controls
   selectScenario: (scenario) => http.post(`${API_BASE}/api/scenarios/select`, { scenario }),
