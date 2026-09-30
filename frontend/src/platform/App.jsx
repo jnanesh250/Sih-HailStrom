@@ -35,12 +35,11 @@ function NotFound() {
   );
 }
 
+import ErrorBoundary from './components/ErrorBoundary.jsx';
+
 export default function PlatformApp() {
   const { path } = useRoute();
-  const hasSession = Boolean(sessionStorage.getItem('stormsense_user'));
-  const requestedRoute = matchRoute(path);
-  // The portal is private: visitors authenticate before seeing any platform page.
-  const route = hasSession ? requestedRoute : { name: 'admin-login' };
+  const route = matchRoute(path);
   const mainRef = useRef(null);
 
   /* Route side-effects: title, scroll reset (unless the URL carries an
@@ -58,13 +57,15 @@ export default function PlatformApp() {
     <>
       <SiteHeader loginOnly={route.name === 'admin-login'} />
       <main id="main-content" ref={mainRef} tabIndex={-1} style={{ outline: 'none' }}>
-        <Suspense fallback={<div className="ss-loading" role="status">Loading StormSense…</div>}>
-          {route.name === 'home' && <HomePage />}
-          {route.name === 'command-centre' && <CommandCentrePage />}
-          {route.name === 'architecture' && <ArchitecturePage />}
-          {route.name === 'admin-login' && <LoginPage />}
-          {route.name === 'not-found' && <NotFound />}
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<div className="ss-loading" role="status">Loading StormSense…</div>}>
+            {route.name === 'home' && <HomePage />}
+            {route.name === 'command-centre' && <CommandCentrePage />}
+            {route.name === 'architecture' && <ArchitecturePage />}
+            {route.name === 'admin-login' && <LoginPage />}
+            {route.name === 'not-found' && <NotFound />}
+          </Suspense>
+        </ErrorBoundary>
       </main>
       {route.name !== 'admin-login' && <SiteFooter />}
     </>

@@ -5,8 +5,7 @@ import {
   Navigation, ShieldAlert, Activity, Clock, Compass
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ReferenceLine, Area } from 'recharts';
-
-const NOWCAST_API = 'http://localhost:8001';
+import { NOWCAST_BASE as NOWCAST_API } from '../config/services';
 
 /* ── Helpers & IMD Scale ─────────────────────────────────── */
 const fmtDate = (iso) => {

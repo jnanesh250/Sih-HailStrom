@@ -86,6 +86,22 @@ npm run dev
 ```
 - Open **`http://localhost:5173`** in your browser.
 
+### Deploying the frontend with the two Render APIs
+
+The frontend reads its service URLs at build time. In the environment variables
+for the frontend's Render static site (or web service), set:
+
+```env
+VITE_API_BASE_URL=https://sih-hailstrom-zuzd.onrender.com
+VITE_STORMAI_BASE_URL=https://sih-hailstrom-2-azmz.onrender.com
+VITE_LIVE_WS_URL=wss://sih-hailstrom-zuzd.onrender.com/ws/live
+```
+
+Then trigger a new frontend deployment. For local testing against the deployed
+services, copy `frontend/.env.example` to `frontend/.env.local` and restart
+Vite. Do not put these values in a plain React constant: Vite only exposes
+browser environment variables prefixed with `VITE_`.
+
 ---
 
 ## 🎯 Key Hackathon Demonstration Highlights

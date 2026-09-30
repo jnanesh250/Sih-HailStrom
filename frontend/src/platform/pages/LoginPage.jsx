@@ -29,11 +29,26 @@ export default function LoginPage() {
     }
     setBusy(true); setStatus('');
     try {
-      const { data } = await api.login(identity, password);
-      sessionStorage.setItem('stormsense_user', JSON.stringify(data.user));
-      window.location.hash = '/command-centre';
+      const { data } = await api.login(identity.trim(), password);
+      if (data?.user) {
+        sessionStorage.setItem('stormsense_user', JSON.stringify(data.user));
+        window.location.hash = '/command-centre';
+      } else {
+        setStatus('Authentication failed: no user data returned.');
+      }
     } catch (err) {
-      setStatus(err.response?.data?.detail || 'Login could not be completed. Check the server connection.');
+      const detail = err.response?.data?.detail;
+      let msg = 'Login could not be completed. Check the server connection.';
+      if (typeof detail === 'string') {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail.map((d) => d.msg || d.type || JSON.stringify(d)).join('; ');
+      } else if (detail && typeof detail === 'object') {
+        msg = detail.msg || detail.message || JSON.stringify(detail);
+      } else if (err.message) {
+        msg = err.message;
+      }
+      setStatus(msg);
       resetCaptcha();
     } finally { setBusy(false); }
   };
@@ -55,7 +70,12 @@ export default function LoginPage() {
           </label>
           {status && <p className="login-error" role="alert">{status}</p>}
           <button className="login-submit" type="submit" disabled={!canSubmit || busy}>{busy ? 'Verifying…' : 'Login securely'}</button>
-          <p className="login-notice">Unauthorised access is strictly prohibited and subject to legal action.</p>
+          <p style={{ marginTop: 12, textAlign: 'center' }}>
+            <a href="#/command-centre" style={{ color: '#93c5fd', textDecoration: 'none', fontSize: '0.85rem' }}>
+              ← Return to Command Centre (Guest Access)
+            </a>
+          </p>
+          <p className="login-notice">Unauthorised administrative access is strictly prohibited and subject to legal action.</p>
         </form>
       </div>
     </section>

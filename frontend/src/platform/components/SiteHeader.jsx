@@ -10,16 +10,17 @@ import { api } from '../../services/api';
    scroll within the current page; route links switch pages. */
 
 const ROUTES = [
-  { to: '/', label: 'Home', caption: 'Overview & alerts' },
   { to: '/command-centre', label: 'Command Centre', caption: 'Live operations' },
+  { to: '/home', label: 'Overview', caption: 'Regional alerts' },
   { to: '/architecture', label: 'Architecture', caption: 'System design' },
 ];
 
 const SECTIONS = {
   '/': [
-    { id: 'nowcast', label: 'Nowcast map', caption: 'Regional outlook' },
-    { id: 'alerts', label: 'Regional alerts', caption: 'Sample warnings' },
-    { id: 'safety', label: 'Safety guidance', caption: 'Be prepared' },
+    { id: 'radar', label: 'Radar', caption: 'Live composite' },
+    { id: 'hazards', label: 'Hazards', caption: 'Probabilities' },
+    { id: 'forecast', label: 'Nowcast', caption: '0–6 hour' },
+    { id: 'simulator', label: 'Simulator', caption: 'What-if lab' },
   ],
   '/command-centre': [
     { id: 'radar', label: 'Radar', caption: 'Live composite' },
@@ -27,13 +28,18 @@ const SECTIONS = {
     { id: 'forecast', label: 'Nowcast', caption: '0–6 hour' },
     { id: 'simulator', label: 'Simulator', caption: 'What-if lab' },
   ],
+  '/home': [
+    { id: 'nowcast', label: 'Nowcast map', caption: 'Regional outlook' },
+    { id: 'alerts', label: 'Regional alerts', caption: 'Sample warnings' },
+    { id: 'safety', label: 'Safety guidance', caption: 'Be prepared' },
+  ],
   '/architecture': [],
 };
 
 /* Build the nav model from the current route so section links and the
    active state follow whichever page is on screen. */
 function buildNav(path) {
-  const base = SECTIONS[path] ? path : '/';
+  const base = SECTIONS[path] ? path : '/command-centre';
   return [
     ...ROUTES.map((r) => ({ ...r, href: `#${r.to}` })),
     ...(SECTIONS[base] || []).map((s) => ({ ...s, href: `#${s.id}`, section: true })),
@@ -56,7 +62,12 @@ export default function SiteHeader({ loginOnly = false }) {
   const { path } = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
   const [live, setLive] = useState(false);
-  const user = JSON.parse(sessionStorage.getItem('stormsense_user') || 'null');
+  let user = null;
+  try {
+    user = JSON.parse(sessionStorage.getItem('stormsense_user') || 'null');
+  } catch {
+    user = null;
+  }
   const istTime = useIstClock();
 
   /* Backend reachability for the live status pill (old core health). */
@@ -72,7 +83,12 @@ export default function SiteHeader({ loginOnly = false }) {
   }, []);
 
   const nav = buildNav(path);
-  const isRouteActive = (item) => (item.to === '/' ? path === '/' : path.startsWith(item.to));
+  const isRouteActive = (item) => {
+    if (item.to === '/command-centre') {
+      return path === '/' || path.startsWith('/command-centre');
+    }
+    return path.startsWith(item.to);
+  };
   const today = new Date().toLocaleDateString('en-IN', {
     timeZone: 'Asia/Kolkata', day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -105,7 +121,7 @@ export default function SiteHeader({ loginOnly = false }) {
       {/* ---------- Emblem masthead ---------- */}
       <div className="gov-masthead">
         <div className="gov-container gov-masthead-inner">
-          <a href="#/" className="gov-brand" aria-label="Indian Weather Portal — StormSense home">
+          <a href="#/command-centre" className="gov-brand" aria-label="Indian Weather Portal — StormSense command centre">
             <span className="gov-brand-emblem"><Emblem height={66} /></span>
             <span style={{ minWidth: 0 }}>
               <span className="gov-brand-hindi" lang="hi">भारत मौसम पोर्टल · Indian Weather Portal</span>
@@ -163,14 +179,29 @@ export default function SiteHeader({ loginOnly = false }) {
               <span className="gov-status-dot" aria-hidden="true" />
               {live ? 'Live data · StormSense core' : 'Core offline · demonstration data'}
             </span>
-            <button
-              type="button"
-              className="gov-admin-button"
-              title={`Signed in as ${user?.username || 'administrator'}. Sign out.`}
-              onClick={() => { sessionStorage.removeItem('stormsense_user'); window.location.hash = '/admin-login'; }}
-            >
-              <ShieldCheck size={13} /> {user?.username || 'Admin'} <LogOut size={13} aria-label="Sign out" />
-            </button>
+            {user ? (
+              <button
+                type="button"
+                className="gov-admin-button"
+                title={`Signed in as ${user?.username || 'administrator'}. Sign out.`}
+                onClick={() => {
+                  sessionStorage.removeItem('stormsense_user');
+                  window.location.hash = '/command-centre';
+                  window.location.reload();
+                }}
+              >
+                <ShieldCheck size={13} /> {user?.username || 'Admin'} <LogOut size={13} aria-label="Sign out" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="gov-admin-button"
+                title="Optional Administration Login"
+                onClick={() => { window.location.hash = '/admin-login'; }}
+              >
+                <ShieldCheck size={13} /> Admin Login
+              </button>
+            )}
           </span>
         </div>
       </nav>}

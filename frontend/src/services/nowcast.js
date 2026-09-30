@@ -3,8 +3,7 @@
    and recursive XGBoost forecasts for the live map simulation. */
 
 import { useCallback, useEffect, useState } from 'react';
-
-const NOWCAST_API = 'http://localhost:8001';
+import { NOWCAST_BASE as NOWCAST_API } from '../config/services';
 
 export function useNowcast() {
   const [storms, setStorms] = useState([]);

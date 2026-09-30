@@ -1,5 +1,7 @@
+import { LIVE_WS_URL } from '../config/services';
+
 class StormWebSocket {
-  constructor(url = 'ws://localhost:8000/ws/live') {
+  constructor(url = LIVE_WS_URL) {
     this.url = url;
     this.ws = null;
     this.callbacks = new Set();

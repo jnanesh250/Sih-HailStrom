@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-const API_BASE = 'http://localhost:8000';
-const NOWCAST_BASE = 'http://localhost:8001';
+import { API_BASE, NOWCAST_BASE } from '../config/services';
 
 const http = axios.create({ timeout: 6000 });
 
